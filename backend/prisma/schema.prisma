@@ -7,15 +7,52 @@ datasource db {
   provider = "sqlite"
 }
 
+model Tutor {
+  id        String   @id @default(cuid())
+  nome      String
+  telefone  String
+  email     String?
+  pets      Pet[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Pet {
+  id             String       @id @default(cuid())
+  nome           String
+  especie        String
+  raca           String?
+  dataNascimento DateTime?
+  tutorId        String
+  tutor          Tutor        @relation(fields: [tutorId], references: [id])
+  internacoes    Internacao[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
 model Internacao {
-  id               String   @id @default(cuid())
+  id               String      @id @default(cuid())
   petNome          String
   especie          String
   tutorNome        String
-  entradaEm        DateTime @default(now())
-  status           String   @default("estavel")
+  entradaEm        DateTime    @default(now())
+  status           String      @default("estavel")
   proximaMedicacao String
-  observacao       String   @default("")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  observacao       String      @default("")
+  petId            String?
+  pet              Pet?        @relation(fields: [petId], references: [id])
+  medicacoes       Medicacao[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model Medicacao {
+  id           String     @id @default(cuid())
+  nome         String
+  horarios     String     @default("[]")
+  cor          String     @default("bg-teal-500")
+  internacaoId String
+  internacao   Internacao @relation(fields: [internacaoId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
