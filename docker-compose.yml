@@ -1,0 +1,34 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cvet-api
+    ports:
+      - "3001:3001"
+    volumes:
+      - cvet-db:/app/prisma
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        API_URL: http://api:3001
+    container_name: cvet-web
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      API_URL: http://api:3001
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  cvet-db:
+    driver: local
