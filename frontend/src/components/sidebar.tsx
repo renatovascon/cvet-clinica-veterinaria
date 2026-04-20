@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, BedDouble, BarChart3, Menu, X, Stethoscope } from 'lucide-react';
+import { LayoutDashboard, BedDouble, BarChart3, Menu, X, Stethoscope, CalendarClock } from 'lucide-react';
 
 const navItems = [
-  { href: '/',            label: 'Início',          icon: LayoutDashboard },
-  { href: '/internacoes', label: 'Internações',      icon: BedDouble },
-  { href: '/analytics',  label: 'Análise de Dados', icon: BarChart3 },
+  { href: '/',            label: 'Início',            icon: LayoutDashboard },
+  { href: '/internacoes', label: 'Internações',        icon: BedDouble },
+  { href: '/mapa',        label: 'Mapa de Execução',   icon: CalendarClock },
+  { href: '/analytics',  label: 'Análise de Dados',   icon: BarChart3 },
 ];
 
 export function Sidebar() {
