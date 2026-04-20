@@ -17,6 +17,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
   const [petNome, setPetNome] = useState('');
   const [especie, setEspecie] = useState('Canina');
   const [tutorNome, setTutorNome] = useState('');
+  const [tutorTelefone, setTutorTelefone] = useState('');
   const [status, setStatus] = useState<InternacaoStatus>('observacao');
   const [proximaMedicacao, setProximaMedicacao] = useState('');
   const [observacao, setObservacao] = useState('');
@@ -24,15 +25,16 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!petNome || !tutorNome || !proximaMedicacao) return;
+    if (!petNome || !tutorNome || !tutorTelefone || !proximaMedicacao) return;
 
     setSubmitting(true);
-    await onCreate({ petNome, especie, tutorNome, status, proximaMedicacao, observacao });
+    await onCreate({ petNome, especie, tutorNome, tutorTelefone, status, proximaMedicacao, observacao, medicacoes: [] });
     setSubmitting(false);
 
     setPetNome('');
     setEspecie('Canina');
     setTutorNome('');
+    setTutorTelefone('');
     setStatus('observacao');
     setProximaMedicacao('');
     setObservacao('');
@@ -81,16 +83,29 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
         </label>
       </div>
 
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Nome do tutor
-        <input
-          value={tutorNome}
-          onChange={(e) => setTutorNome(e.target.value)}
-          className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
-          placeholder="Ex: Ana Lima"
-          required
-        />
-      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          Nome do tutor
+          <input
+            value={tutorNome}
+            onChange={(e) => setTutorNome(e.target.value)}
+            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
+            placeholder="Ex: Ana Lima"
+            required
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          Telefone do tutor
+          <input
+            value={tutorTelefone}
+            onChange={(e) => setTutorTelefone(e.target.value)}
+            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
+            placeholder="Ex: 11999990001"
+            required
+          />
+        </label>
+      </div>
 
       <label className="grid gap-2 text-sm font-medium text-slate-700">
         Próxima medicação
