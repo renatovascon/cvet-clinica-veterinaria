@@ -1,0 +1,25 @@
+# Dependências e builds
+node_modules
+.next
+generated
+
+# Banco local (será criado dentro do container)
+prisma/dev.db
+prisma/dev.db-shm
+prisma/dev.db-wal
+
+# Configs de ambiente e IDE
+.env
+.env.*
+.vscode
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Docs e planejamento
+*.txt
+*.md
+apresentacao.md
+planejamento_projeto_cvet.md
