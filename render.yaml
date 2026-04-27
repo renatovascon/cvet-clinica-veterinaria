@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: cvet-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: cvet-db
+      mountPath: /app/prisma
+      sizeGB: 1
+
+  - type: web
+    name: cvet-web
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: starter
+    buildArgs:
+      - key: API_URL
+        fromService:
+          name: cvet-api
+          type: web
+          property: url
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: API_URL
+        fromService:
+          name: cvet-api
+          type: web
+          property: url
