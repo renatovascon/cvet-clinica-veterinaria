@@ -23,5 +23,6 @@ backend/.env
 dist/
 coverage/
 *.db
+*.tsbuildinfo
 
 .vscode
