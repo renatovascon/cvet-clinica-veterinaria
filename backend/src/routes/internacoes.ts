@@ -5,6 +5,12 @@ import { prisma } from '../lib/prisma.js';
 
 const statusSchema = z.enum(['estavel', 'observacao', 'critico']);
 
+const medicacaoSchema = z.object({
+  nome:     z.string().min(1),
+  horarios: z.array(z.string()).min(1),
+  cor:      z.string().default('bg-teal-500'),
+});
+
 const createSchema = z.object({
   petNome:          z.string().min(1),
   especie:          z.string().min(1),
@@ -13,18 +19,13 @@ const createSchema = z.object({
   status:           statusSchema.default('estavel'),
   proximaMedicacao: z.string().min(1),
   observacao:       z.string().optional().default(''),
+  medicacoes:       z.array(medicacaoSchema).optional().default([]),
 });
 
 const updateSchema = z.object({
   status:           statusSchema.optional(),
   proximaMedicacao: z.string().min(1).optional(),
   observacao:       z.string().optional(),
-});
-
-const medicacaoSchema = z.object({
-  nome:     z.string().min(1),
-  horarios: z.array(z.string()).min(1),
-  cor:      z.string().default('bg-teal-500'),
 });
 
 const petInclude = { pet: { include: { tutor: true } } } as const;
@@ -51,7 +52,7 @@ export const internacoesRoutes = new Hono()
   })
 
   .post('/', zValidator('json', createSchema), async (c) => {
-    const { tutorTelefone, ...data } = c.req.valid('json');
+    const { tutorTelefone, medicacoes, ...data } = c.req.valid('json');
 
     let tutor = await prisma.tutor.findFirst({
       where: { nome: data.tutorNome, telefone: tutorTelefone },
@@ -72,7 +73,17 @@ export const internacoesRoutes = new Hono()
     }
 
     const internacao = await prisma.internacao.create({
-      data: { ...data, petId: pet.id },
+      data: {
+        ...data,
+        petId: pet.id,
+        medicacoes: {
+          create: medicacoes.map((m) => ({
+            nome: m.nome,
+            horarios: JSON.stringify(m.horarios),
+            cor: m.cor,
+          })),
+        },
+      },
       include: { ...petInclude, medicacoes: true },
     });
     return c.json(parseMeds(internacao), 201);
