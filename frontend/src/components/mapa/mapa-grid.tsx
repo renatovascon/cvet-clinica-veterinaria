@@ -97,7 +97,7 @@ export function MapaGrid({ internacoes }: Props) {
                             key={med.nome}
                             title={med.nome}
                             className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${med.cor} ${
-                              past ? 'opacity-40' : ''
+                              past ? 'opacity-90' : ''
                             }`}
                           >
                             {med.nome}
