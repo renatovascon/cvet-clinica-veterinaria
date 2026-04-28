@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Internacao, InternacaoStatus } from '@/types/internacao';
 
 type InternacaoFormProps = {
@@ -30,22 +30,22 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
   const [tutorNome, setTutorNome] = useState('');
   const [tutorTelefone, setTutorTelefone] = useState('');
   const [status, setStatus] = useState<InternacaoStatus>('observacao');
-  const [proxHora, setProxHora] = useState('');
-  const [proxNome, setProxNome] = useState('');
+  const [manualHora, setManualHora] = useState('');
+  const [manualNome, setManualNome] = useState('');
   const [observacao, setObservacao] = useState('');
   const [medicacoes, setMedicacoes] = useState<FormMed[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+  const autoMed = useMemo(() => {
     const all = medicacoes
       .flatMap((m) => m.horarios.map((h) => ({ h, nome: m.nome })))
       .filter((x) => x.h)
       .sort((a, b) => a.h.localeCompare(b.h));
-    if (all.length > 0) {
-      setProxHora(all[0].h);
-      setProxNome(all[0].nome);
-    }
+    return all[0] ?? null;
   }, [medicacoes]);
+
+  const proxHora = autoMed?.h ?? manualHora;
+  const proxNome = autoMed?.nome ?? manualNome;
 
   function addMedicacao() {
     setMedicacoes((prev) => [...prev, { nome: '', horarios: [''], cor: 'bg-teal-500' }]);
@@ -104,8 +104,8 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
     setTutorNome('');
     setTutorTelefone('');
     setStatus('observacao');
-    setProxHora('');
-    setProxNome('');
+    setManualHora('');
+    setManualNome('');
     setObservacao('');
     setMedicacoes([]);
   }
@@ -253,19 +253,26 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
       </div>
 
       <div className="grid gap-2">
-        <span className="text-sm font-medium text-slate-700">Próxima medicação</span>
+        <span className="text-sm font-medium text-slate-700">
+          Próxima medicação
+          {autoMed && (
+            <span className="ml-2 text-xs font-normal text-slate-400">(preenchido automaticamente)</span>
+          )}
+        </span>
         <div className="grid gap-2 sm:grid-cols-2">
           <input
             value={proxHora}
-            onChange={(e) => setProxHora(e.target.value)}
+            onChange={(e) => !autoMed && setManualHora(e.target.value)}
+            readOnly={!!autoMed}
             type="time"
-            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
+            className={`rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss ${autoMed ? 'bg-slate-50 text-slate-500' : ''}`}
             required
           />
           <input
             value={proxNome}
-            onChange={(e) => setProxNome(e.target.value)}
-            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
+            onChange={(e) => !autoMed && setManualNome(e.target.value)}
+            readOnly={!!autoMed}
+            className={`rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss ${autoMed ? 'bg-slate-50 text-slate-500' : ''}`}
             placeholder="Nome do medicamento"
           />
         </div>
