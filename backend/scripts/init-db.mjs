@@ -92,9 +92,18 @@ if (count === 0) {
       (id, petNome, especie, tutorNome, entradaEm, status, proximaMedicacao, observacao, petId, createdAt, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  insert.run('seed-1', 'Luna',   'Canina', 'João Menezes',  '2026-04-18T09:20:00', 'observacao', '11:30', 'Pós-operatório, resposta adequada ao antibiótico.',  'pet-1', now, now);
-  insert.run('seed-2', 'Mingau', 'Felina', 'Carla Santos',  '2026-04-18T14:05:00', 'estavel',    '12:10', 'Hidratação assistida e monitoramento de apetite.',    'pet-2', now, now);
-  insert.run('seed-3', 'Thor',   'Canina', 'Mariana Costa', '2026-04-19T07:40:00', 'critico',    '10:45', 'Monitoramento contínuo de sinais vitais.',            'pet-3', now, now);
+  insert.run('seed-1', 'Luna',   'Canina', 'João Menezes',  '2026-04-18T09:20:00', 'observacao', '08:00', 'Pós-operatório, resposta adequada ao antibiótico.',  'pet-1', now, now);
+  insert.run('seed-2', 'Mingau', 'Felina', 'Carla Santos',  '2026-04-18T14:05:00', 'estavel',    '06:00', 'Hidratação assistida e monitoramento de apetite.',    'pet-2', now, now);
+  insert.run('seed-3', 'Thor',   'Canina', 'Mariana Costa', '2026-04-19T07:40:00', 'critico',    '08:00', 'Monitoramento contínuo de sinais vitais.',            'pet-3', now, now);
+
+  const insertMed = db.prepare(
+    `INSERT INTO "Medicacao" (id, nome, horarios, cor, internacaoId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  );
+  insertMed.run('med-1', 'Antibiótico',       JSON.stringify(['08:00', '20:00']),          'bg-teal-500',   'seed-1', now, now);
+  insertMed.run('med-2', 'Anti-inflamatório', JSON.stringify(['12:00']),                   'bg-orange-500', 'seed-1', now, now);
+  insertMed.run('med-3', 'Soro fisiológico',  JSON.stringify(['06:00', '14:00', '22:00']), 'bg-blue-500',   'seed-2', now, now);
+  insertMed.run('med-4', 'Analgésico',        JSON.stringify(['08:00', '16:00']),          'bg-purple-500', 'seed-3', now, now);
+  insertMed.run('med-5', 'Antibiótico',       JSON.stringify(['10:00', '22:00']),          'bg-teal-500',   'seed-3', now, now);
 
   console.log('Banco inicializado com dados de exemplo.');
 } else {
