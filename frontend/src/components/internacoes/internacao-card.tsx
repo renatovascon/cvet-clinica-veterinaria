@@ -6,11 +6,25 @@ type InternacaoCardProps = {
   internacao: Internacao;
 };
 
+function resolverProximaMedicacao(internacao: Internacao): string {
+  const meds = internacao.medicacoes ?? [];
+  if (!meds.length) return internacao.proximaMedicacao;
+
+  const agora = new Date().toTimeString().slice(0, 5);
+  const todas = meds
+    .flatMap((m) => m.horarios.map((h) => ({ horario: h, nome: m.nome })))
+    .sort((a, b) => a.horario.localeCompare(b.horario));
+
+  const proxima = todas.find((m) => m.horario >= agora) ?? todas[0];
+  return `${proxima.horario} — ${proxima.nome}`;
+}
+
 export function InternacaoCard({ internacao }: InternacaoCardProps) {
   const entradaFormatada = new Date(internacao.entradaEm).toLocaleString('pt-BR', {
     dateStyle: 'short',
-    timeStyle: 'short'
+    timeStyle: 'short',
   });
+  const proximaMedicacao = resolverProximaMedicacao(internacao);
 
   return (
     <Link href={`/internacoes/${internacao.id}`} className="block">
@@ -31,7 +45,7 @@ export function InternacaoCard({ internacao }: InternacaoCardProps) {
             <span className="font-semibold">Entrada:</span> {entradaFormatada}
           </p>
           <p>
-            <span className="font-semibold">Proxima medicacao:</span> {internacao.proximaMedicacao}
+            <span className="font-semibold">Próxima medicação:</span> {proximaMedicacao}
           </p>
         </div>
 
