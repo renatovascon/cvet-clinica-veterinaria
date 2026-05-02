@@ -282,7 +282,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
       </div>
 
       <div className="grid gap-2">
-        <span className="text-sm font-medium text-slate-700">
+        {/* <span className="text-sm font-medium text-slate-700">
           Próxima medicação
           {autoMed && (
             <span className="ml-2 text-xs font-normal text-slate-400">(preenchido automaticamente)</span>
@@ -304,7 +304,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
             className={`rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss ${autoMed ? 'bg-slate-50 text-slate-500' : ''}`}
             placeholder="Nome do medicamento"
           />
-        </div>
+        </div> */}
       </div>
 
       <label className="grid gap-2 text-sm font-medium text-slate-700">
