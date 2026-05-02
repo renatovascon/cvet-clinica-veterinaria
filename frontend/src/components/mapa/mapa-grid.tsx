@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Internacao, Medicacao } from '@/types/internacao';
 import { StatusBadge } from '@/components/internacoes/status-badge';
 
@@ -36,7 +37,8 @@ function currentSlot(slots: string[], isToday: boolean): string | null {
   return null;
 }
 
-function isPast(slot: string, date: Date): boolean {
+function isPast(slot: string, activeSlot: string | null, date: Date): boolean {
+  if (slot === activeSlot) return false;
   const now = new Date();
   const selectedYMD = localYMD(date);
   const todayYMD = localYMD(now);
@@ -50,9 +52,20 @@ function isPast(slot: string, date: Date): boolean {
 type Props = { internacoes: Internacao[]; selectedDate: Date };
 
 export function MapaGrid({ internacoes, selectedDate }: Props) {
+  const [administrados, setAdministrados] = useState<Set<string>>(new Set());
+
   const isToday    = localYMD(selectedDate) === localYMD(new Date());
   const slots      = getSlots(internacoes, selectedDate);
   const activeSlot = currentSlot(slots, isToday);
+
+  function toggleAdministrado(petId: string, slot: string, medNome: string) {
+    const key = `${petId}-${slot}-${medNome}`;
+    setAdministrados((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -66,9 +79,7 @@ export function MapaGrid({ internacoes, selectedDate }: Props) {
               <th
                 key={slot}
                 className={`min-w-[90px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-widest ${
-                  slot === activeSlot
-                    ? 'bg-moss/10 text-moss'
-                    : 'text-slate-500'
+                  slot === activeSlot ? 'bg-moss/10 text-moss' : 'text-slate-500'
                 }`}
               >
                 {slot}
@@ -99,7 +110,7 @@ export function MapaGrid({ internacoes, selectedDate }: Props) {
 
                 {slots.map((slot) => {
                   const meds = activeMeds.filter((m) => m.horarios.includes(slot));
-                  const past = isPast(slot, selectedDate);
+                  const autoPast = isPast(slot, activeSlot, selectedDate);
                   const active = slot === activeSlot;
 
                   return (
@@ -109,17 +120,24 @@ export function MapaGrid({ internacoes, selectedDate }: Props) {
                     >
                       {meds.length > 0 ? (
                         <div className="flex flex-col items-center gap-1">
-                          {meds.map((med) => (
-                            <span
-                              key={med.nome}
-                              title={med.nome}
-                              className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${med.cor} ${
-                                past ? 'opacity-90' : ''
-                              }`}
-                            >
-                              {med.nome}
-                            </span>
-                          ))}
+                          {meds.map((med) => {
+                            const key = `${pet.id}-${slot}-${med.nome}`;
+                            const administrado = administrados.has(key);
+                            const dimmed = administrado || autoPast;
+                            return (
+                              <button
+                                key={med.nome}
+                                type="button"
+                                onClick={() => toggleAdministrado(pet.id, slot, med.nome)}
+                                title={administrado ? 'Clique para desmarcar' : 'Clique para marcar como ministrado'}
+                                className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold text-white transition-opacity cursor-pointer ${med.cor} ${
+                                  dimmed ? 'opacity-30 grayscale' : 'hover:opacity-80'
+                                }`}
+                              >
+                                {med.nome}
+                              </button>
+                            );
+                          })}
                         </div>
                       ) : (
                         <span className="text-slate-200">—</span>
