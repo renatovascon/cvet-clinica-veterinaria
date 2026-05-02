@@ -24,7 +24,7 @@ const createSchema = z.object({
   tutorTelefone:    z.string().min(1),
   tutorCpf:         z.string().optional(),
   status:           statusSchema.default('estavel'),
-  proximaMedicacao: z.string().min(1),
+  proximaMedicacao: z.string().optional().default(''),
   observacao:       z.string().optional().default(''),
   medicacoes:       z.array(medicacaoSchema).optional().default([]),
 });

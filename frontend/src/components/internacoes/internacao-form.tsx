@@ -81,9 +81,11 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
 
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!petNome || !tutorNome || !tutorTelefone || !proxHora) return;
+    if (!petNome || !tutorNome || !tutorTelefone) return;
 
-    const proximaMedicacao = proxNome ? `${proxHora} — ${proxNome}` : proxHora;
+    const proximaMedicacao = proxHora
+      ? (proxNome ? `${proxHora} — ${proxNome}` : proxHora)
+      : '';
 
     const medicacoesValidas = medicacoes
       .filter((m) => m.nome.trim())
