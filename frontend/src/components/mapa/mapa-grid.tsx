@@ -1,19 +1,33 @@
 'use client';
 
-import { Internacao } from '@/types/internacao';
+import { Internacao, Medicacao } from '@/types/internacao';
 import { StatusBadge } from '@/components/internacoes/status-badge';
 
-function getSlots(internacoes: Internacao[]): string[] {
+function localYMD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function medActiveOn(med: Medicacao, date: Date): boolean {
+  if (!med.fimEm) return true;
+  return localYMD(date) <= med.fimEm.slice(0, 10);
+}
+
+function getSlots(internacoes: Internacao[], date: Date): string[] {
   const all = new Set<string>();
   for (const pet of internacoes) {
     for (const med of (pet.medicacoes ?? [])) {
+      if (!medActiveOn(med, date)) continue;
       for (const h of med.horarios) all.add(h);
     }
   }
   return Array.from(all).sort();
 }
 
-function currentSlot(slots: string[]): string | null {
+function currentSlot(slots: string[], isToday: boolean): string | null {
+  if (!isToday) return null;
   const now = new Date();
   const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   for (let i = slots.length - 1; i >= 0; i--) {
@@ -22,18 +36,23 @@ function currentSlot(slots: string[]): string | null {
   return null;
 }
 
-function isPast(slot: string): boolean {
+function isPast(slot: string, date: Date): boolean {
   const now = new Date();
+  const selectedYMD = localYMD(date);
+  const todayYMD = localYMD(now);
+  if (selectedYMD < todayYMD) return true;
+  if (selectedYMD > todayYMD) return false;
   const [h, m] = slot.split(':').map(Number);
   const slotDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
   return slotDate < now;
 }
 
-type Props = { internacoes: Internacao[] };
+type Props = { internacoes: Internacao[]; selectedDate: Date };
 
-export function MapaGrid({ internacoes }: Props) {
-  const slots      = getSlots(internacoes);
-  const activeSlot = currentSlot(slots);
+export function MapaGrid({ internacoes, selectedDate }: Props) {
+  const isToday    = localYMD(selectedDate) === localYMD(new Date());
+  const slots      = getSlots(internacoes, selectedDate);
+  const activeSlot = currentSlot(slots, isToday);
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -61,57 +80,56 @@ export function MapaGrid({ internacoes }: Props) {
           </tr>
         </thead>
         <tbody>
-          {internacoes.map((pet, idx) => (
-            <tr
-              key={pet.id}
-              className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
-            >
-              {/* Pet info cell */}
-              <td className="sticky left-0 z-10 px-5 py-4" style={{ background: 'inherit' }}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-900">{pet.petNome}</p>
-                    <p className="text-xs text-slate-500">{pet.especie} · {pet.tutorNome}</p>
+          {internacoes.map((pet, idx) => {
+            const activeMeds = (pet.medicacoes ?? []).filter((m) => medActiveOn(m, selectedDate));
+            return (
+              <tr
+                key={pet.id}
+                className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+              >
+                <td className="sticky left-0 z-10 px-5 py-4" style={{ background: 'inherit' }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">{pet.petNome}</p>
+                      <p className="text-xs text-slate-500">{pet.especie} · {pet.tutorNome}</p>
+                    </div>
+                    <StatusBadge status={pet.status} />
                   </div>
-                  <StatusBadge status={pet.status} />
-                </div>
-              </td>
+                </td>
 
-              {/* Time slot cells */}
-              {slots.map((slot) => {
-                const meds = pet.medicacoes.filter((m) => m.horarios.includes(slot));
-                const past = isPast(slot);
-                const active = slot === activeSlot;
+                {slots.map((slot) => {
+                  const meds = activeMeds.filter((m) => m.horarios.includes(slot));
+                  const past = isPast(slot, selectedDate);
+                  const active = slot === activeSlot;
 
-                return (
-                  <td
-                    key={slot}
-                    className={`px-2 py-3 text-center align-top ${
-                      active ? 'bg-moss/5' : ''
-                    }`}
-                  >
-                    {meds.length > 0 ? (
-                      <div className="flex flex-col items-center gap-1">
-                        {meds.map((med) => (
-                          <span
-                            key={med.nome}
-                            title={med.nome}
-                            className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${med.cor} ${
-                              past ? 'opacity-90' : ''
-                            }`}
-                          >
-                            {med.nome}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-slate-200">—</span>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+                  return (
+                    <td
+                      key={slot}
+                      className={`px-2 py-3 text-center align-top ${active ? 'bg-moss/5' : ''}`}
+                    >
+                      {meds.length > 0 ? (
+                        <div className="flex flex-col items-center gap-1">
+                          {meds.map((med) => (
+                            <span
+                              key={med.nome}
+                              title={med.nome}
+                              className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${med.cor} ${
+                                past ? 'opacity-90' : ''
+                              }`}
+                            >
+                              {med.nome}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-slate-200">—</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
