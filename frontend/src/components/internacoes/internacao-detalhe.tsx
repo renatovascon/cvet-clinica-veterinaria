@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { Internacao, InternacaoStatus, Medicacao } from '@/types/internacao';
-import { calcularHorarios, FREQUENCIAS } from '@/lib/horarios';
+import { calcularHorarios, FREQUENCIAS, resolverProximaMedicacao } from '@/lib/horarios';
 import { StatusBadge } from './status-badge';
 
 const STATUS_OPTIONS: { value: InternacaoStatus; label: string; classes: string }[] = [
@@ -133,7 +133,7 @@ export function InternacaoDetalhe({ id }: Props) {
       {/* Info grid */}
       <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <InfoItem label="Entrada" value={entrada} />
-        <InfoItem label="Próxima medicação" value={internacao.proximaMedicacao} />
+        <InfoItem label="Próxima medicação" value={resolverProximaMedicacao(internacao)} />
         <InfoItem label="Espécie" value={internacao.especie} />
         {internacao.observacao && <InfoItem label="Observação" value={internacao.observacao} />}
       </div>

@@ -1,3 +1,16 @@
+import type { Internacao } from '@/types/internacao';
+
+export function resolverProximaMedicacao(internacao: Internacao): string {
+  const meds = internacao.medicacoes ?? [];
+  if (!meds.length) return internacao.proximaMedicacao || '—';
+  const agora = new Date().toTimeString().slice(0, 5);
+  const todas = meds
+    .flatMap((m) => m.horarios.map((h) => ({ horario: h, nome: m.nome })))
+    .sort((a, b) => a.horario.localeCompare(b.horario));
+  const proxima = todas.find((x) => x.horario >= agora) ?? todas[0];
+  return proxima ? `${proxima.horario} — ${proxima.nome}` : '—';
+}
+
 export const FREQUENCIAS = [
   { horas: 4,  label: 'A cada 4 h  (6×/dia)' },
   { horas: 6,  label: 'A cada 6 h  (4×/dia)' },

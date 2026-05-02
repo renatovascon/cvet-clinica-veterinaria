@@ -1,23 +1,11 @@
 import Link from 'next/link';
 import { Internacao } from '@/types/internacao';
+import { resolverProximaMedicacao } from '@/lib/horarios';
 import { StatusBadge } from './status-badge';
 
 type InternacaoCardProps = {
   internacao: Internacao;
 };
-
-function resolverProximaMedicacao(internacao: Internacao): string {
-  const meds = internacao.medicacoes ?? [];
-  if (!meds.length) return internacao.proximaMedicacao;
-
-  const agora = new Date().toTimeString().slice(0, 5);
-  const todas = meds
-    .flatMap((m) => m.horarios.map((h) => ({ horario: h, nome: m.nome })))
-    .sort((a, b) => a.horario.localeCompare(b.horario));
-
-  const proxima = todas.find((m) => m.horario >= agora) ?? todas[0];
-  return `${proxima.horario} — ${proxima.nome}`;
-}
 
 export function InternacaoCard({ internacao }: InternacaoCardProps) {
   const entradaFormatada = new Date(internacao.entradaEm).toLocaleString('pt-BR', {
