@@ -2,16 +2,19 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
+import { calcularHorarios } from '../lib/horarios.js';
 
 const statusSchema = z.enum(['estavel', 'observacao', 'critico']);
 
 const medicacaoSchema = z.object({
-  nome:     z.string().min(1),
-  horarios: z.array(z.string()).min(1),
-  cor:      z.string().default('bg-teal-500'),
-  via:       z.string().default('Oral'),
-  unidade:   z.string().default('mg'),
-  quantidade: z.number().positive().default(1),
+  nome:            z.string().min(1),
+  primeiroHorario: z.string().regex(/^\d{2}:\d{2}$/),
+  frequenciaHoras: z.number().int().positive(),
+  fimEm:           z.string().optional(),
+  cor:             z.string().default('bg-teal-500'),
+  via:             z.string().default('Oral'),
+  unidade:         z.string().default('mg'),
+  quantidade:      z.number().positive().default(1),
 });
 
 const createSchema = z.object({
@@ -87,9 +90,15 @@ export const internacoesRoutes = new Hono()
         petId: pet.id,
         medicacoes: {
           create: medicacoes.map((m) => ({
-            nome: m.nome,
-            horarios: JSON.stringify(m.horarios),
-            cor: m.cor,
+            nome:            m.nome,
+            horarios:        JSON.stringify(calcularHorarios(m.primeiroHorario, m.frequenciaHoras)),
+            cor:             m.cor,
+            via:             m.via,
+            unidade:         m.unidade,
+            quantidade:      m.quantidade,
+            frequenciaHoras: m.frequenciaHoras,
+            primeiroHorario: m.primeiroHorario,
+            fimEm:           m.fimEm ? new Date(m.fimEm) : null,
           })),
         },
       },
@@ -123,16 +132,20 @@ export const internacoesRoutes = new Hono()
 
   // ── Medicações ───────────────────────────────────────────────
   .post('/:id/medicacoes', zValidator('json', medicacaoSchema), async (c) => {
-    const { nome, horarios, cor, via, unidade, quantidade } = c.req.valid('json');
+    const { nome, primeiroHorario, frequenciaHoras, fimEm, cor, via, unidade, quantidade } = c.req.valid('json');
+    const horarios = calcularHorarios(primeiroHorario, frequenciaHoras);
     const med = await prisma.medicacao.create({
       data: {
         nome,
-        horarios: JSON.stringify(horarios),
+        horarios:        JSON.stringify(horarios),
         cor,
         via,
         unidade,
         quantidade,
-        internacaoId: c.req.param('id'),
+        frequenciaHoras,
+        primeiroHorario,
+        fimEm:           fimEm ? new Date(fimEm) : null,
+        internacaoId:    c.req.param('id'),
       },
     });
     return c.json({ ...med, horarios }, 201);

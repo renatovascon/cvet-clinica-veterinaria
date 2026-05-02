@@ -7,6 +7,9 @@ export type Medicacao = {
   via: string;
   unidade: string;
   quantidade: number;
+  primeiroHorario: string;
+  frequenciaHoras: number;
+  fimEm?: string;
 };
 
 export type Internacao = {

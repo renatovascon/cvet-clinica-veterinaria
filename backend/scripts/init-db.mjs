@@ -53,16 +53,19 @@ db.exec(`
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS "Medicacao" (
-    "id"           TEXT     NOT NULL PRIMARY KEY,
-    "nome"         TEXT     NOT NULL,
-    "horarios"     TEXT     NOT NULL DEFAULT '[]',
-    "cor"          TEXT     NOT NULL DEFAULT 'bg-teal-500',
-    "via"          TEXT     NOT NULL DEFAULT 'Oral',
-    "unidade"      TEXT     NOT NULL DEFAULT 'mg',
-    "quantidade"   REAL     NOT NULL DEFAULT 1,
-    "internacaoId" TEXT     NOT NULL,
-    "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt"    DATETIME NOT NULL,
+    "id"              TEXT     NOT NULL PRIMARY KEY,
+    "nome"            TEXT     NOT NULL,
+    "horarios"        TEXT     NOT NULL DEFAULT '[]',
+    "cor"             TEXT     NOT NULL DEFAULT 'bg-teal-500',
+    "via"             TEXT     NOT NULL DEFAULT 'Oral',
+    "unidade"         TEXT     NOT NULL DEFAULT 'mg',
+    "quantidade"      REAL     NOT NULL DEFAULT 1,
+    "frequenciaHoras" INTEGER  NOT NULL DEFAULT 8,
+    "primeiroHorario" TEXT     NOT NULL DEFAULT '08:00',
+    "fimEm"           DATETIME,
+    "internacaoId"    TEXT     NOT NULL,
+    "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt"       DATETIME NOT NULL,
     FOREIGN KEY ("internacaoId") REFERENCES "Internacao"("id") ON DELETE CASCADE
   )
 `);
@@ -73,6 +76,9 @@ try { db.exec(`ALTER TABLE "Tutor" ADD COLUMN "cpf" TEXT`); } catch { /* já exi
 try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "via" TEXT NOT NULL DEFAULT 'Oral'`); } catch { /* já existe */ }
 try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "unidade" TEXT NOT NULL DEFAULT 'mg'`); } catch { /* já existe */ }
 try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "quantidade" REAL NOT NULL DEFAULT 1`); } catch { /* já existe */ }
+try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "frequenciaHoras" INTEGER NOT NULL DEFAULT 8`); } catch { /* já existe */ }
+try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "primeiroHorario" TEXT NOT NULL DEFAULT '08:00'`); } catch { /* já existe */ }
+try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "fimEm" DATETIME`); } catch { /* já existe */ }
 
 const { count } = db.prepare('SELECT COUNT(*) as count FROM "Internacao"').get();
 
@@ -102,14 +108,28 @@ if (count === 0) {
   insert.run('seed-2', 'Mingau', 'Felina', 'Carla Santos',  '2026-04-18T14:05:00', 'estavel',    '06:00', 'Hidratação assistida e monitoramento de apetite.',    'pet-2', now, now);
   insert.run('seed-3', 'Thor',   'Canina', 'Mariana Costa', '2026-04-19T07:40:00', 'critico',    '08:00', 'Monitoramento contínuo de sinais vitais.',            'pet-3', now, now);
 
-  const insertMed = db.prepare(
-    `INSERT INTO "Medicacao" (id, nome, horarios, cor, internacaoId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  function calcHorarios(primeiro, freqH) {
+    const [h, m] = primeiro.split(':').map(Number);
+    const startMin = h * 60 + m;
+    const count = Math.round(1440 / (freqH * 60));
+    return Array.from({ length: count }, (_, i) => {
+      const total = (startMin + i * freqH * 60) % 1440;
+      return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
+    });
+  }
+
+  const fim = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const insertMed = db.prepare(`
+    INSERT INTO "Medicacao"
+      (id, nome, horarios, cor, via, unidade, quantidade, frequenciaHoras, primeiroHorario, fimEm, internacaoId, createdAt, updatedAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
-  insertMed.run('med-1', 'Antibiótico',       JSON.stringify(['08:00', '20:00']),          'bg-teal-500',   'seed-1', now, now);
-  insertMed.run('med-2', 'Anti-inflamatório', JSON.stringify(['12:00']),                   'bg-orange-500', 'seed-1', now, now);
-  insertMed.run('med-3', 'Soro fisiológico',  JSON.stringify(['06:00', '14:00', '22:00']), 'bg-blue-500',   'seed-2', now, now);
-  insertMed.run('med-4', 'Analgésico',        JSON.stringify(['08:00', '16:00']),          'bg-purple-500', 'seed-3', now, now);
-  insertMed.run('med-5', 'Antibiótico',       JSON.stringify(['10:00', '22:00']),          'bg-teal-500',   'seed-3', now, now);
+  insertMed.run('med-1', 'Antibiótico',       JSON.stringify(calcHorarios('08:00', 12)), 'bg-teal-500',   'Oral',        'mg', 500, 12, '08:00', fim, 'seed-1', now, now);
+  insertMed.run('med-2', 'Anti-inflamatório', JSON.stringify(calcHorarios('12:00', 24)), 'bg-orange-500', 'Oral',        'mg', 100, 24, '12:00', fim, 'seed-1', now, now);
+  insertMed.run('med-3', 'Soro fisiológico',  JSON.stringify(calcHorarios('06:00',  8)), 'bg-blue-500',   'Intravenosa', 'ml', 250,  8, '06:00', fim, 'seed-2', now, now);
+  insertMed.run('med-4', 'Analgésico',        JSON.stringify(calcHorarios('08:00', 12)), 'bg-purple-500', 'Oral',        'mg',  50, 12, '08:00', fim, 'seed-3', now, now);
+  insertMed.run('med-5', 'Antibiótico',       JSON.stringify(calcHorarios('10:00', 12)), 'bg-teal-500',   'Oral',        'mg', 500, 12, '10:00', fim, 'seed-3', now, now);
 
   console.log('Banco inicializado com dados de exemplo.');
 } else {

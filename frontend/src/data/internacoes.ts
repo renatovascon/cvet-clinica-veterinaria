@@ -11,8 +11,8 @@ export const internacoesIniciais: Internacao[] = [
     proximaMedicacao: '14:00',
     observacao: 'Pos-operatorio, resposta adequada ao antibiotico.',
     medicacoes: [
-      { nome: 'Dipirona',    horarios: ['08:00', '14:00', '20:00'], cor: 'bg-amber-400', via: 'Oral',         unidade: 'mg', quantidade: 500 },
-      { nome: 'Amoxicilina', horarios: ['08:00', '20:00'],          cor: 'bg-teal-500',  via: 'Oral',         unidade: 'mg', quantidade: 250 },
+      { nome: 'Dipirona',    horarios: ['08:00', '14:00', '20:00'], cor: 'bg-amber-400', via: 'Oral', unidade: 'mg', quantidade: 500, primeiroHorario: '08:00', frequenciaHoras: 8  },
+      { nome: 'Amoxicilina', horarios: ['08:00', '20:00'],          cor: 'bg-teal-500',  via: 'Oral', unidade: 'mg', quantidade: 250, primeiroHorario: '08:00', frequenciaHoras: 12 },
     ],
   },
   {
@@ -25,8 +25,8 @@ export const internacoesIniciais: Internacao[] = [
     proximaMedicacao: '12:00',
     observacao: 'Hidratacao assistida e monitoramento de apetite.',
     medicacoes: [
-      { nome: 'Soro Fisiol.', horarios: ['06:00', '12:00', '18:00'], cor: 'bg-blue-400',   via: 'Intravenosa', unidade: 'ml', quantidade: 250 },
-      { nome: 'Supl. Vitam.', horarios: ['10:00'],                   cor: 'bg-purple-400', via: 'Oral',        unidade: 'ml', quantidade: 10  },
+      { nome: 'Soro Fisiol.', horarios: ['06:00', '12:00', '18:00'], cor: 'bg-blue-400',   via: 'Intravenosa', unidade: 'ml', quantidade: 250, primeiroHorario: '06:00', frequenciaHoras: 8  },
+      { nome: 'Supl. Vitam.', horarios: ['10:00'],                   cor: 'bg-purple-400', via: 'Oral',        unidade: 'ml', quantidade: 10,  primeiroHorario: '10:00', frequenciaHoras: 24 },
     ],
   },
   {
@@ -39,9 +39,9 @@ export const internacoesIniciais: Internacao[] = [
     proximaMedicacao: '10:00',
     observacao: 'Monitoramento continuo de sinais vitais.',
     medicacoes: [
-      { nome: 'Adrenalina',  horarios: ['06:00', '10:00', '14:00', '18:00', '22:00'], cor: 'bg-rose-500',   via: 'Intravenosa', unidade: 'mg', quantidade: 1   },
-      { nome: 'Amoxicilina', horarios: ['08:00', '20:00'],                            cor: 'bg-teal-500',   via: 'Oral',        unidade: 'mg', quantidade: 500 },
-      { nome: 'Furosemida',  horarios: ['08:00', '16:00'],                            cor: 'bg-orange-400', via: 'Oral',        unidade: 'mg', quantidade: 40  },
+      { nome: 'Adrenalina',  horarios: ['06:00', '10:00', '14:00', '18:00', '22:00'], cor: 'bg-rose-500',   via: 'Intravenosa', unidade: 'mg', quantidade: 1,   primeiroHorario: '06:00', frequenciaHoras: 4  },
+      { nome: 'Amoxicilina', horarios: ['08:00', '20:00'],                            cor: 'bg-teal-500',   via: 'Oral',        unidade: 'mg', quantidade: 500, primeiroHorario: '08:00', frequenciaHoras: 12 },
+      { nome: 'Furosemida',  horarios: ['08:00', '16:00'],                            cor: 'bg-orange-400', via: 'Oral',        unidade: 'mg', quantidade: 40,  primeiroHorario: '08:00', frequenciaHoras: 8  },
     ],
   },
 ];

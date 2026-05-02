@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Trash2, Plus, X } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import { Internacao, InternacaoStatus, Medicacao } from '@/types/internacao';
+import { calcularHorarios, FREQUENCIAS } from '@/lib/horarios';
 import { StatusBadge } from './status-badge';
 
 const STATUS_OPTIONS: { value: InternacaoStatus; label: string; classes: string }[] = [
@@ -12,13 +13,15 @@ const STATUS_OPTIONS: { value: InternacaoStatus; label: string; classes: string 
   { value: 'critico',    label: 'Crítico',    classes: 'border-rose-300   bg-rose-50   text-rose-700   hover:bg-rose-100'   },
 ];
 
-const CORES = [
-  'bg-teal-500', 'bg-amber-400', 'bg-blue-400',
-  'bg-rose-500', 'bg-purple-400', 'bg-orange-400',
-];
+const CORES     = ['bg-teal-500','bg-amber-400','bg-blue-400','bg-rose-500','bg-purple-400','bg-orange-400'];
+const UNIDADES  = ['Borrifada','Cápsula','cm','Comprimido','Drágea','g','Gota(s)','l','mcg','Medida','mg','ml','UN','Sachê','UI'];
+const VIAS      = ['Enema','Epidural','Inalatória','Intramuscular','Intraóssea','Intraperitoneal','Intravenosa','Oftálmica','Oral','Otológica','Sonda','Subcutânea','Tópica'];
 
-const UNIDADES = ['Borrifada','Cápsula','cm','Comprimido','Drágea','g','Gota(s)','l','mcg','Medida','mg','ml','UN','Sachê','UI'];
-const VIAS     = ['Enema','Epidural','Inalatória','Intramuscular','Intraóssea','Intraperitoneal','Intravenosa','Oftálmica','Oral','Otológica','Sonda','Subcutânea','Tópica'];
+function defaultFimEm() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().slice(0, 10);
+}
 
 type Props = { id: string };
 
@@ -28,22 +31,26 @@ export function InternacaoDetalhe({ id }: Props) {
   const [error, setError]           = useState<string | null>(null);
 
   // Form state
-  const [medNome, setMedNome]         = useState('');
-  const [medCor, setMedCor]           = useState(CORES[0]);
-  const [medVia, setMedVia]           = useState('Oral');
-  const [medUnidade, setMedUnidade]   = useState('mg');
-  const [medQuantidade, setMedQuantidade] = useState(1);
-  const [medHorarios, setMedHorarios] = useState<string[]>(['08:00']);
-  const [saving, setSaving]           = useState(false);
+  const [medNome, setMedNome]                   = useState('');
+  const [medCor, setMedCor]                     = useState(CORES[0]);
+  const [medVia, setMedVia]                     = useState('Oral');
+  const [medUnidade, setMedUnidade]             = useState('mg');
+  const [medQuantidade, setMedQuantidade]       = useState(1);
+  const [medPrimeiroHorario, setMedPrimeiroHorario] = useState('08:00');
+  const [medFrequenciaHoras, setMedFrequenciaHoras] = useState(8);
+  const [medFimEm, setMedFimEm]                 = useState(defaultFimEm);
+  const [saving, setSaving]                     = useState(false);
+
+  const medPreview = calcularHorarios(medPrimeiroHorario, medFrequenciaHoras);
 
   useEffect(() => {
     fetch(`/api/internacoes/${id}`)
       .then((r) => r.json())
       .then((data) => setInternacao({
-          ...data,
-          tutorCpf:      data.pet?.tutor?.cpf       ?? undefined,
-          tutorTelefone: data.pet?.tutor?.telefone   ?? undefined,
-        }))
+        ...data,
+        tutorCpf:      data.pet?.tutor?.cpf      ?? undefined,
+        tutorTelefone: data.pet?.tutor?.telefone  ?? undefined,
+      }))
       .catch(() => setError('Erro ao carregar internação.'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -58,12 +65,16 @@ export function InternacaoDetalhe({ id }: Props) {
   }
 
   async function addMedicacao() {
-    if (!medNome || medHorarios.length === 0) return;
+    if (!medNome) return;
     setSaving(true);
     const res = await fetch(`/api/internacoes/${id}/medicacoes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: medNome, horarios: medHorarios, cor: medCor, via: medVia, unidade: medUnidade, quantidade: medQuantidade }),
+      body: JSON.stringify({
+        nome: medNome, cor: medCor, via: medVia, unidade: medUnidade,
+        quantidade: medQuantidade, primeiroHorario: medPrimeiroHorario,
+        frequenciaHoras: medFrequenciaHoras, fimEm: medFimEm || undefined,
+      }),
     });
     if (res.ok) {
       const nova: Medicacao = await res.json();
@@ -75,7 +86,9 @@ export function InternacaoDetalhe({ id }: Props) {
       setMedVia('Oral');
       setMedUnidade('mg');
       setMedQuantidade(1);
-      setMedHorarios(['08:00']);
+      setMedPrimeiroHorario('08:00');
+      setMedFrequenciaHoras(8);
+      setMedFimEm(defaultFimEm());
     }
     setSaving(false);
   }
@@ -85,18 +98,6 @@ export function InternacaoDetalhe({ id }: Props) {
     setInternacao((prev) =>
       prev ? { ...prev, medicacoes: prev.medicacoes.filter((m) => (m as Medicacao & { id: string }).id !== medId) } : prev
     );
-  }
-
-  function addHorario() {
-    setMedHorarios((h) => [...h, '08:00']);
-  }
-
-  function removeHorario(i: number) {
-    setMedHorarios((h) => h.filter((_, idx) => idx !== i));
-  }
-
-  function setHorario(i: number, val: string) {
-    setMedHorarios((h) => h.map((v, idx) => (idx === i ? val : v)));
   }
 
   if (loading) return <p className="p-8 text-sm text-slate-500">Carregando...</p>;
@@ -159,7 +160,6 @@ export function InternacaoDetalhe({ id }: Props) {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Medicações</p>
 
-        {/* List */}
         {internacao.medicacoes.length === 0 ? (
           <p className="mb-4 text-sm text-slate-400">Nenhuma medicação registrada.</p>
         ) : (
@@ -172,13 +172,14 @@ export function InternacaoDetalhe({ id }: Props) {
                     <span className={`h-3 w-3 shrink-0 rounded-full ${m.cor}`} />
                     <span className="font-medium text-slate-800">{m.nome}</span>
                     <span className="text-xs text-slate-500">{m.horarios.join(' · ')}</span>
+                    {m.quantidade != null && (
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
+                        {m.quantidade} {m.unidade}
+                      </span>
+                    )}
                     {m.via && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{m.via}</span>}
-                    {m.unidade && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{m.unidade}</span>}
                   </div>
-                  <button
-                    onClick={() => removeMedicacao(m.id)}
-                    className="text-slate-400 hover:text-rose-500 transition"
-                  >
+                  <button onClick={() => removeMedicacao(m.id)} className="text-slate-400 hover:text-rose-500 transition">
                     <Trash2 size={15} />
                   </button>
                 </li>
@@ -187,7 +188,7 @@ export function InternacaoDetalhe({ id }: Props) {
           </ul>
         )}
 
-        {/* Add form */}
+        {/* Formulário de nova medicação */}
         <div className="grid gap-4 rounded-xl border border-dashed border-slate-300 p-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Nova medicação</p>
 
@@ -205,9 +206,7 @@ export function InternacaoDetalhe({ id }: Props) {
             <label className="grid gap-1.5 text-sm font-medium text-slate-700">
               Quantidade
               <input
-                type="number"
-                min="0.1"
-                step="0.1"
+                type="number" min="0.1" step="0.1"
                 value={medQuantidade}
                 onChange={(e) => setMedQuantidade(Number(e.target.value))}
                 className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
@@ -215,37 +214,26 @@ export function InternacaoDetalhe({ id }: Props) {
             </label>
             <label className="grid gap-1.5 text-sm font-medium text-slate-700">
               Unidade
-              <select
-                value={medUnidade}
-                onChange={(e) => setMedUnidade(e.target.value)}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
-              >
+              <select value={medUnidade} onChange={(e) => setMedUnidade(e.target.value)}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss">
                 {UNIDADES.map((u) => <option key={u}>{u}</option>)}
               </select>
             </label>
-
             <label className="grid gap-1.5 text-sm font-medium text-slate-700">
               Via
-              <select
-                value={medVia}
-                onChange={(e) => setMedVia(e.target.value)}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
-              >
+              <select value={medVia} onChange={(e) => setMedVia(e.target.value)}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss">
                 {VIAS.map((v) => <option key={v}>{v}</option>)}
               </select>
             </label>
-
           </div>
 
-          {/* Color picker */}
+          {/* Cor */}
           <div>
             <p className="mb-2 text-sm font-medium text-slate-700">Cor</p>
             <div className="flex gap-2">
               {CORES.map((cor) => (
-                <button
-                  key={cor}
-                  type="button"
-                  onClick={() => setMedCor(cor)}
+                <button key={cor} type="button" onClick={() => setMedCor(cor)}
                   className={`h-7 w-7 rounded-full ${cor} transition ${
                     medCor === cor ? 'ring-2 ring-offset-2 ring-slate-400' : 'opacity-60 hover:opacity-100'
                   }`}
@@ -254,34 +242,37 @@ export function InternacaoDetalhe({ id }: Props) {
             </div>
           </div>
 
-          {/* Horários */}
-          <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">Horários</p>
-            <div className="flex flex-wrap gap-2">
-              {medHorarios.map((h, i) => (
-                <div key={i} className="flex items-center gap-1">
-                  <input
-                    type="time"
-                    value={h}
-                    onChange={(e) => setHorario(i, e.target.value)}
-                    className="rounded-xl border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-moss"
-                  />
-                  {medHorarios.length > 1 && (
-                    <button type="button" onClick={() => removeHorario(i)} className="text-slate-400 hover:text-rose-500">
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addHorario}
-                className="flex items-center gap-1 rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-xs text-slate-500 hover:border-moss hover:text-moss"
-              >
-                <Plus size={13} /> Horário
-              </button>
-            </div>
+          {/* Frequência */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+              Frequência
+              <select value={medFrequenciaHoras} onChange={(e) => setMedFrequenciaHoras(Number(e.target.value))}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss">
+                {FREQUENCIAS.map((f) => (
+                  <option key={f.horas} value={f.horas}>{f.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+              Primeiro horário
+              <input type="time" value={medPrimeiroHorario}
+                onChange={(e) => setMedPrimeiroHorario(e.target.value)}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+              Até quando
+              <input type="date" value={medFimEm}
+                onChange={(e) => setMedFimEm(e.target.value)}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
+              />
+            </label>
           </div>
+
+          {/* Preview */}
+          <p className="text-xs text-slate-400">
+            Doses diárias: <span className="font-medium text-slate-600">{medPreview.join(' · ')}</span>
+          </p>
 
           <button
             onClick={addMedicacao}

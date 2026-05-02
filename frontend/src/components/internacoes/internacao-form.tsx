@@ -2,49 +2,73 @@
 
 import React, { useMemo, useState } from 'react';
 import { Internacao, InternacaoStatus } from '@/types/internacao';
+import { calcularHorarios, FREQUENCIAS } from '@/lib/horarios';
 
 type InternacaoFormProps = {
   onCreate: (data: Omit<Internacao, 'id' | 'entradaEm'>) => Promise<void>;
 };
 
-type FormMed = { nome: string; horarios: string[]; cor: string; via: string; unidade: string; quantidade: number };
+type FormMed = {
+  nome: string;
+  primeiroHorario: string;
+  frequenciaHoras: number;
+  fimEm: string;
+  cor: string;
+  via: string;
+  unidade: string;
+  quantidade: number;
+};
 
 const statusOptions: { value: InternacaoStatus; label: string }[] = [
-  { value: 'estavel', label: 'Estável' },
+  { value: 'estavel',    label: 'Estável' },
   { value: 'observacao', label: 'Observação' },
-  { value: 'critico', label: 'Crítico' },
+  { value: 'critico',    label: 'Crítico' },
 ];
 
 const COR_OPTIONS = ['bg-teal-500','bg-blue-500','bg-orange-500','bg-purple-500','bg-rose-500','bg-yellow-500'];
 const UNIDADES    = ['Borrifada','Cápsula','cm','Comprimido','Drágea','g','Gota(s)','l','mcg','Medida','mg','ml','UN','Sachê','UI'];
 const VIAS        = ['Enema','Epidural','Inalatória','Intramuscular','Intraóssea','Intraperitoneal','Intravenosa','Oftálmica','Oral','Otológica','Sonda','Subcutânea','Tópica'];
 
+function defaultFimEm() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().slice(0, 10);
+}
+
 export function InternacaoForm({ onCreate }: InternacaoFormProps) {
-  const [petNome, setPetNome] = useState('');
-  const [especie, setEspecie] = useState('Canina');
-  const [tutorNome, setTutorNome] = useState('');
+  const [petNome, setPetNome]         = useState('');
+  const [especie, setEspecie]         = useState('Canina');
+  const [tutorNome, setTutorNome]     = useState('');
   const [tutorTelefone, setTutorTelefone] = useState('');
-  const [tutorCpf, setTutorCpf] = useState('');
-  const [status, setStatus] = useState<InternacaoStatus>('observacao');
-  const [manualHora, setManualHora] = useState('');
-  const [manualNome, setManualNome] = useState('');
-  const [observacao, setObservacao] = useState('');
-  const [medicacoes, setMedicacoes] = useState<FormMed[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+  const [tutorCpf, setTutorCpf]       = useState('');
+  const [status, setStatus]           = useState<InternacaoStatus>('observacao');
+  const [manualHora, setManualHora]   = useState('');
+  const [manualNome, setManualNome]   = useState('');
+  const [observacao, setObservacao]   = useState('');
+  const [medicacoes, setMedicacoes]   = useState<FormMed[]>([]);
+  const [submitting, setSubmitting]   = useState(false);
+
+  const agora = new Date().toTimeString().slice(0, 5);
 
   const autoMed = useMemo(() => {
     const all = medicacoes
-      .flatMap((m) => m.horarios.map((h) => ({ h, nome: m.nome })))
-      .filter((x) => x.h)
+      .filter((m) => m.nome && m.primeiroHorario)
+      .flatMap((m) =>
+        calcularHorarios(m.primeiroHorario, m.frequenciaHoras).map((h) => ({ h, nome: m.nome }))
+      )
       .sort((a, b) => a.h.localeCompare(b.h));
-    return all[0] ?? null;
-  }, [medicacoes]);
+    return all.find((x) => x.h >= agora) ?? all[0] ?? null;
+  }, [medicacoes, agora]);
 
   const proxHora = autoMed?.h ?? manualHora;
   const proxNome = autoMed?.nome ?? manualNome;
 
   function addMedicacao() {
-    setMedicacoes((prev) => [...prev, { nome: '', horarios: [''], cor: 'bg-teal-500', via: 'Oral', unidade: 'mg', quantidade: 1 }]);
+    setMedicacoes((prev) => [
+      ...prev,
+      { nome: '', primeiroHorario: '08:00', frequenciaHoras: 8, fimEm: defaultFimEm(),
+        cor: 'bg-teal-500', via: 'Oral', unidade: 'mg', quantidade: 1 },
+    ]);
   }
 
   function removeMedicacao(i: number) {
@@ -55,28 +79,6 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
     setMedicacoes((prev) => prev.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
   }
 
-  function addHorario(i: number) {
-    setMedicacoes((prev) =>
-      prev.map((m, idx) => (idx === i ? { ...m, horarios: [...m.horarios, ''] } : m)),
-    );
-  }
-
-  function removeHorario(i: number, j: number) {
-    setMedicacoes((prev) =>
-      prev.map((m, idx) =>
-        idx === i ? { ...m, horarios: m.horarios.filter((_, jdx) => jdx !== j) } : m,
-      ),
-    );
-  }
-
-  function setHorario(i: number, j: number, value: string) {
-    setMedicacoes((prev) =>
-      prev.map((m, idx) =>
-        idx === i ? { ...m, horarios: m.horarios.map((h, jdx) => (jdx === j ? value : h)) } : m,
-      ),
-    );
-  }
-
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!petNome || !tutorNome || !tutorTelefone || !proxHora) return;
@@ -85,26 +87,21 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
 
     const medicacoesValidas = medicacoes
       .filter((m) => m.nome.trim())
-      .map((m) => ({ ...m, horarios: m.horarios.filter(Boolean) }))
-      .filter((m) => m.horarios.length > 0);
+      .map((m) => ({
+        ...m,
+        horarios: calcularHorarios(m.primeiroHorario, m.frequenciaHoras),
+      }));
 
     setSubmitting(true);
     await onCreate({
-      petNome, especie, tutorNome, tutorTelefone, tutorCpf: tutorCpf || undefined, status,
-      proximaMedicacao, observacao, medicacoes: medicacoesValidas,
+      petNome, especie, tutorNome, tutorTelefone, tutorCpf: tutorCpf || undefined,
+      status, proximaMedicacao, observacao, medicacoes: medicacoesValidas,
     });
     setSubmitting(false);
 
-    setPetNome('');
-    setEspecie('Canina');
-    setTutorNome('');
-    setTutorTelefone('');
-    setTutorCpf('');
-    setStatus('observacao');
-    setManualHora('');
-    setManualNome('');
-    setObservacao('');
-    setMedicacoes([]);
+    setPetNome(''); setEspecie('Canina'); setTutorNome(''); setTutorTelefone('');
+    setTutorCpf(''); setStatus('observacao'); setManualHora(''); setManualNome('');
+    setObservacao(''); setMedicacoes([]);
   }
 
   return (
@@ -175,7 +172,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
 
       </div>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
-          CPF
+          CPF do tutor
           <input
             value={tutorCpf}
             onChange={(e) => setTutorCpf(e.target.value)}
@@ -183,129 +180,6 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
             placeholder="Ex: 000.000.000-00"
           />
         </label>
-
-      <div className="grid gap-3">
-        {/* <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-slate-700">Medicações</span>
-          <button
-            type="button"
-            onClick={addMedicacao}
-            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
-          >
-            + Adicionar medicação
-          </button>
-        </div> */}
-
-        {/* {medicacoes.map((med, i) => (
-          <div key={i} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-center gap-2">
-              <input
-                value={med.nome}
-                onChange={(e) => updateMed(i, { nome: e.target.value })}
-                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none transition focus:border-moss"
-                placeholder="Nome do medicamento"
-              />
-              <input
-                type="number"
-                min="0.1"
-                step="0.1"
-                value={med.quantidade}
-                onChange={(e) => updateMed(i, { quantidade: Number(e.target.value) })}
-                className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-moss"
-              />
-              <select
-                value={med.via}
-                onChange={(e) => updateMed(i, { via: e.target.value })}
-                className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-moss"
-              >
-                {VIAS.map((v) => <option key={v}>{v}</option>)}
-              </select>
-              <select
-                value={med.unidade}
-                onChange={(e) => updateMed(i, { unidade: e.target.value })}
-                className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-moss"
-              >
-                {UNIDADES.map((u) => <option key={u}>{u}</option>)}
-              </select>
-              <button
-                type="button"
-                onClick={() => removeMedicacao(i)}
-                className="px-1 text-lg leading-none text-slate-400 transition hover:text-rose-500"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="flex gap-2">
-              {COR_OPTIONS.map((cor) => (
-                <button
-                  key={cor}
-                  type="button"
-                  onClick={() => updateMed(i, { cor })}
-                  className={`h-5 w-5 rounded-full ${cor} transition ${
-                    med.cor === cor ? 'ring-2 ring-slate-400 ring-offset-1' : 'opacity-50 hover:opacity-100'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <div className="grid gap-1.5">
-              {med.horarios.map((h, j) => (
-                <div key={j} className="flex items-center gap-2">
-                  <input
-                    type="time"
-                    value={h}
-                    onChange={(e) => setHorario(i, j, e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none transition focus:border-moss"
-                  />
-                  {med.horarios.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeHorario(i, j)}
-                      className="text-slate-400 transition hover:text-rose-500"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => addHorario(i)}
-                className="text-left text-xs text-slate-500 transition hover:text-moss"
-              >
-                + horário
-              </button>
-            </div>
-          </div>
-        ))} */}
-      </div>
-
-      <div className="grid gap-2">
-        {/* <span className="text-sm font-medium text-slate-700">
-          Próxima medicação
-          {autoMed && (
-            <span className="ml-2 text-xs font-normal text-slate-400">(preenchido automaticamente)</span>
-          )}
-        </span>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <input
-            value={proxHora}
-            onChange={(e) => !autoMed && setManualHora(e.target.value)}
-            readOnly={!!autoMed}
-            type="time"
-            className={`rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss ${autoMed ? 'bg-slate-50 text-slate-500' : ''}`}
-            required
-          />
-          <input
-            value={proxNome}
-            onChange={(e) => !autoMed && setManualNome(e.target.value)}
-            readOnly={!!autoMed}
-            className={`rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss ${autoMed ? 'bg-slate-50 text-slate-500' : ''}`}
-            placeholder="Nome do medicamento"
-          />
-        </div> */}
-      </div>
 
       <label className="grid gap-2 text-sm font-medium text-slate-700">
         Observação
