@@ -9,5 +9,7 @@ export const app = new Hono();
 app.use('*', logger());
 app.use('*', cors({ origin: ['http://localhost:3000', 'http://web:3000'] }));
 
+app.get('/api/health', (c) => c.json({ ok: true }));
+
 app.route('/api/internacoes', internacoesRoutes);
 app.route('/api/analytics', analyticsRoutes);

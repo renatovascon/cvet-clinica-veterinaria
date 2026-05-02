@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Manrope, Space_Grotesk } from 'next/font/google';
 import { Sidebar } from '@/components/sidebar';
+import { BackendWakeUp } from '@/components/backend-wakeup';
 import './globals.css';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' });
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <body className={`${spaceGrotesk.variable} ${manrope.variable} font-sans`}>
+        <BackendWakeUp />
         <div className="flex h-screen overflow-hidden bg-slate-50">
           <Sidebar />
           <div className="flex-1 overflow-y-auto">
