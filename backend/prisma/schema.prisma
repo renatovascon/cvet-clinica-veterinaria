@@ -11,6 +11,7 @@ model Tutor {
   id        String   @id @default(cuid())
   nome      String
   telefone  String
+  cpf       String?
   email     String?
   pets      Pet[]
   createdAt DateTime @default(now())
@@ -51,6 +52,9 @@ model Medicacao {
   nome         String
   horarios     String     @default("[]")
   cor          String     @default("bg-teal-500")
+  via          String     @default("Oral")
+  unidade      String     @default("mg")
+  quantidade   Float      @default(1)
   internacaoId String
   internacao   Internacao @relation(fields: [internacaoId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())

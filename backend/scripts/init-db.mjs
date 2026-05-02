@@ -14,6 +14,7 @@ db.exec(`
     "id"        TEXT     NOT NULL PRIMARY KEY,
     "nome"      TEXT     NOT NULL,
     "telefone"  TEXT     NOT NULL,
+    "cpf"       TEXT,
     "email"     TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
@@ -56,6 +57,9 @@ db.exec(`
     "nome"         TEXT     NOT NULL,
     "horarios"     TEXT     NOT NULL DEFAULT '[]',
     "cor"          TEXT     NOT NULL DEFAULT 'bg-teal-500',
+    "via"          TEXT     NOT NULL DEFAULT 'Oral',
+    "unidade"      TEXT     NOT NULL DEFAULT 'mg',
+    "quantidade"   REAL     NOT NULL DEFAULT 1,
     "internacaoId" TEXT     NOT NULL,
     "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt"    DATETIME NOT NULL,
@@ -63,10 +67,12 @@ db.exec(`
   )
 `);
 
-// Adiciona petId em bases antigas que não têm a coluna
-try {
-  db.exec(`ALTER TABLE "Internacao" ADD COLUMN "petId" TEXT REFERENCES "Pet"("id")`);
-} catch { /* coluna já existe */ }
+// Adiciona colunas em bases antigas que não as têm
+try { db.exec(`ALTER TABLE "Internacao" ADD COLUMN "petId" TEXT REFERENCES "Pet"("id")`); } catch { /* já existe */ }
+try { db.exec(`ALTER TABLE "Tutor" ADD COLUMN "cpf" TEXT`); } catch { /* já existe */ }
+try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "via" TEXT NOT NULL DEFAULT 'Oral'`); } catch { /* já existe */ }
+try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "unidade" TEXT NOT NULL DEFAULT 'mg'`); } catch { /* já existe */ }
+try { db.exec(`ALTER TABLE "Medicacao" ADD COLUMN "quantidade" REAL NOT NULL DEFAULT 1`); } catch { /* já existe */ }
 
 const { count } = db.prepare('SELECT COUNT(*) as count FROM "Internacao"').get();
 

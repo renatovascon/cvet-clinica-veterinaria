@@ -7,7 +7,7 @@ type InternacaoFormProps = {
   onCreate: (data: Omit<Internacao, 'id' | 'entradaEm'>) => Promise<void>;
 };
 
-type FormMed = { nome: string; horarios: string[]; cor: string };
+type FormMed = { nome: string; horarios: string[]; cor: string; via: string; unidade: string; quantidade: number };
 
 const statusOptions: { value: InternacaoStatus; label: string }[] = [
   { value: 'estavel', label: 'Estável' },
@@ -15,20 +15,16 @@ const statusOptions: { value: InternacaoStatus; label: string }[] = [
   { value: 'critico', label: 'Crítico' },
 ];
 
-const COR_OPTIONS = [
-  'bg-teal-500',
-  'bg-blue-500',
-  'bg-orange-500',
-  'bg-purple-500',
-  'bg-rose-500',
-  'bg-yellow-500',
-];
+const COR_OPTIONS = ['bg-teal-500','bg-blue-500','bg-orange-500','bg-purple-500','bg-rose-500','bg-yellow-500'];
+const UNIDADES    = ['Borrifada','Cápsula','cm','Comprimido','Drágea','g','Gota(s)','l','mcg','Medida','mg','ml','UN','Sachê','UI'];
+const VIAS        = ['Enema','Epidural','Inalatória','Intramuscular','Intraóssea','Intraperitoneal','Intravenosa','Oftálmica','Oral','Otológica','Sonda','Subcutânea','Tópica'];
 
 export function InternacaoForm({ onCreate }: InternacaoFormProps) {
   const [petNome, setPetNome] = useState('');
   const [especie, setEspecie] = useState('Canina');
   const [tutorNome, setTutorNome] = useState('');
   const [tutorTelefone, setTutorTelefone] = useState('');
+  const [tutorCpf, setTutorCpf] = useState('');
   const [status, setStatus] = useState<InternacaoStatus>('observacao');
   const [manualHora, setManualHora] = useState('');
   const [manualNome, setManualNome] = useState('');
@@ -48,7 +44,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
   const proxNome = autoMed?.nome ?? manualNome;
 
   function addMedicacao() {
-    setMedicacoes((prev) => [...prev, { nome: '', horarios: [''], cor: 'bg-teal-500' }]);
+    setMedicacoes((prev) => [...prev, { nome: '', horarios: [''], cor: 'bg-teal-500', via: 'Oral', unidade: 'mg', quantidade: 1 }]);
   }
 
   function removeMedicacao(i: number) {
@@ -94,7 +90,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
 
     setSubmitting(true);
     await onCreate({
-      petNome, especie, tutorNome, tutorTelefone, status,
+      petNome, especie, tutorNome, tutorTelefone, tutorCpf: tutorCpf || undefined, status,
       proximaMedicacao, observacao, medicacoes: medicacoesValidas,
     });
     setSubmitting(false);
@@ -103,6 +99,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
     setEspecie('Canina');
     setTutorNome('');
     setTutorTelefone('');
+    setTutorCpf('');
     setStatus('observacao');
     setManualHora('');
     setManualNome('');
@@ -175,10 +172,20 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
             required
           />
         </label>
+
       </div>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          CPF
+          <input
+            value={tutorCpf}
+            onChange={(e) => setTutorCpf(e.target.value)}
+            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
+            placeholder="Ex: 000.000.000-00"
+          />
+        </label>
 
       <div className="grid gap-3">
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-slate-700">Medicações</span>
           <button
             type="button"
@@ -187,17 +194,39 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
           >
             + Adicionar medicação
           </button>
-        </div>
+        </div> */}
 
-        {medicacoes.map((med, i) => (
+        {/* {medicacoes.map((med, i) => (
           <div key={i} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <div className="flex items-center gap-2">
               <input
                 value={med.nome}
                 onChange={(e) => updateMed(i, { nome: e.target.value })}
-                className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none transition focus:border-moss"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none transition focus:border-moss"
                 placeholder="Nome do medicamento"
               />
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={med.quantidade}
+                onChange={(e) => updateMed(i, { quantidade: Number(e.target.value) })}
+                className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-moss"
+              />
+              <select
+                value={med.via}
+                onChange={(e) => updateMed(i, { via: e.target.value })}
+                className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-moss"
+              >
+                {VIAS.map((v) => <option key={v}>{v}</option>)}
+              </select>
+              <select
+                value={med.unidade}
+                onChange={(e) => updateMed(i, { unidade: e.target.value })}
+                className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-moss"
+              >
+                {UNIDADES.map((u) => <option key={u}>{u}</option>)}
+              </select>
               <button
                 type="button"
                 onClick={() => removeMedicacao(i)}
@@ -249,7 +278,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
               </button>
             </div>
           </div>
-        ))}
+        ))} */}
       </div>
 
       <div className="grid gap-2">

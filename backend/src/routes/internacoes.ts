@@ -9,6 +9,9 @@ const medicacaoSchema = z.object({
   nome:     z.string().min(1),
   horarios: z.array(z.string()).min(1),
   cor:      z.string().default('bg-teal-500'),
+  via:       z.string().default('Oral'),
+  unidade:   z.string().default('mg'),
+  quantidade: z.number().positive().default(1),
 });
 
 const createSchema = z.object({
@@ -16,6 +19,7 @@ const createSchema = z.object({
   especie:          z.string().min(1),
   tutorNome:        z.string().min(1),
   tutorTelefone:    z.string().min(1),
+  tutorCpf:         z.string().optional(),
   status:           statusSchema.default('estavel'),
   proximaMedicacao: z.string().min(1),
   observacao:       z.string().optional().default(''),
@@ -52,14 +56,19 @@ export const internacoesRoutes = new Hono()
   })
 
   .post('/', zValidator('json', createSchema), async (c) => {
-    const { tutorTelefone, medicacoes, ...data } = c.req.valid('json');
+    const { tutorTelefone, tutorCpf, medicacoes, ...data } = c.req.valid('json');
 
     let tutor = await prisma.tutor.findFirst({
       where: { nome: data.tutorNome, telefone: tutorTelefone },
     });
     if (!tutor) {
       tutor = await prisma.tutor.create({
-        data: { nome: data.tutorNome, telefone: tutorTelefone },
+        data: { nome: data.tutorNome, telefone: tutorTelefone, cpf: tutorCpf ?? null },
+      });
+    } else if (tutorCpf && !tutor.cpf) {
+      tutor = await prisma.tutor.update({
+        where: { id: tutor.id },
+        data: { cpf: tutorCpf },
       });
     }
 
@@ -114,12 +123,15 @@ export const internacoesRoutes = new Hono()
 
   // ── Medicações ───────────────────────────────────────────────
   .post('/:id/medicacoes', zValidator('json', medicacaoSchema), async (c) => {
-    const { nome, horarios, cor } = c.req.valid('json');
+    const { nome, horarios, cor, via, unidade, quantidade } = c.req.valid('json');
     const med = await prisma.medicacao.create({
       data: {
         nome,
         horarios: JSON.stringify(horarios),
         cor,
+        via,
+        unidade,
+        quantidade,
         internacaoId: c.req.param('id'),
       },
     });

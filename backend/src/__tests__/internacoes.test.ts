@@ -57,7 +57,7 @@ beforeEach(async () => {
   vi.mocked(p.internacao.update).mockResolvedValue(fakeInternacao() as never);
   vi.mocked(p.internacao.delete).mockResolvedValue(undefined as never);
   vi.mocked(p.tutor.findFirst).mockResolvedValue(null);
-  vi.mocked(p.tutor.create).mockResolvedValue({ id: 'tutor-1', nome: 'João', telefone: '11999', email: null, createdAt: new Date(), updatedAt: new Date() });
+  vi.mocked(p.tutor.create).mockResolvedValue({ id: 'tutor-1', nome: 'João', telefone: '11999', cpf: null, email: null, createdAt: new Date(), updatedAt: new Date() });
   vi.mocked(p.pet.findFirst).mockResolvedValue(null);
   vi.mocked(p.pet.create).mockResolvedValue({ id: 'pet-1', nome: 'Luna', especie: 'Canina', raca: null, dataNascimento: null, tutorId: 'tutor-1', createdAt: new Date(), updatedAt: new Date() });
 });

@@ -17,6 +17,9 @@ const CORES = [
   'bg-rose-500', 'bg-purple-400', 'bg-orange-400',
 ];
 
+const UNIDADES = ['Borrifada','Cápsula','cm','Comprimido','Drágea','g','Gota(s)','l','mcg','Medida','mg','ml','UN','Sachê','UI'];
+const VIAS     = ['Enema','Epidural','Inalatória','Intramuscular','Intraóssea','Intraperitoneal','Intravenosa','Oftálmica','Oral','Otológica','Sonda','Subcutânea','Tópica'];
+
 type Props = { id: string };
 
 export function InternacaoDetalhe({ id }: Props) {
@@ -25,15 +28,22 @@ export function InternacaoDetalhe({ id }: Props) {
   const [error, setError]           = useState<string | null>(null);
 
   // Form state
-  const [medNome, setMedNome]       = useState('');
-  const [medCor, setMedCor]         = useState(CORES[0]);
+  const [medNome, setMedNome]         = useState('');
+  const [medCor, setMedCor]           = useState(CORES[0]);
+  const [medVia, setMedVia]           = useState('Oral');
+  const [medUnidade, setMedUnidade]   = useState('mg');
+  const [medQuantidade, setMedQuantidade] = useState(1);
   const [medHorarios, setMedHorarios] = useState<string[]>(['08:00']);
-  const [saving, setSaving]         = useState(false);
+  const [saving, setSaving]           = useState(false);
 
   useEffect(() => {
     fetch(`/api/internacoes/${id}`)
       .then((r) => r.json())
-      .then((data) => setInternacao(data))
+      .then((data) => setInternacao({
+          ...data,
+          tutorCpf:      data.pet?.tutor?.cpf       ?? undefined,
+          tutorTelefone: data.pet?.tutor?.telefone   ?? undefined,
+        }))
       .catch(() => setError('Erro ao carregar internação.'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -53,7 +63,7 @@ export function InternacaoDetalhe({ id }: Props) {
     const res = await fetch(`/api/internacoes/${id}/medicacoes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: medNome, horarios: medHorarios, cor: medCor }),
+      body: JSON.stringify({ nome: medNome, horarios: medHorarios, cor: medCor, via: medVia, unidade: medUnidade, quantidade: medQuantidade }),
     });
     if (res.ok) {
       const nova: Medicacao = await res.json();
@@ -62,6 +72,9 @@ export function InternacaoDetalhe({ id }: Props) {
       );
       setMedNome('');
       setMedCor(CORES[0]);
+      setMedVia('Oral');
+      setMedUnidade('mg');
+      setMedQuantidade(1);
       setMedHorarios(['08:00']);
     }
     setSaving(false);
@@ -105,7 +118,12 @@ export function InternacaoDetalhe({ id }: Props) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{internacao.id}</p>
             <h1 className="text-2xl font-bold text-slate-900">{internacao.petNome}</h1>
-            <p className="text-sm text-slate-500">{internacao.especie} · Tutor: {internacao.tutorNome}</p>
+            <p className="text-sm text-slate-500">{internacao.especie}</p>
+            <p className="text-sm text-slate-500">
+              Tutor: {internacao.tutorNome}
+              {internacao.tutorCpf && <> · CPF: {internacao.tutorCpf}</>}
+              {internacao.tutorTelefone && <> · Tel: {internacao.tutorTelefone}</>}
+            </p>
           </div>
           <StatusBadge status={internacao.status} />
         </div>
@@ -151,9 +169,11 @@ export function InternacaoDetalhe({ id }: Props) {
               return (
                 <li key={m.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <span className={`h-3 w-3 rounded-full ${m.cor}`} />
+                    <span className={`h-3 w-3 shrink-0 rounded-full ${m.cor}`} />
                     <span className="font-medium text-slate-800">{m.nome}</span>
                     <span className="text-xs text-slate-500">{m.horarios.join(' · ')}</span>
+                    {m.via && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{m.via}</span>}
+                    {m.unidade && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{m.unidade}</span>}
                   </div>
                   <button
                     onClick={() => removeMedicacao(m.id)}
@@ -180,6 +200,42 @@ export function InternacaoDetalhe({ id }: Props) {
               className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
             />
           </label>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+              Quantidade
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={medQuantidade}
+                onChange={(e) => setMedQuantidade(Number(e.target.value))}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+              Unidade
+              <select
+                value={medUnidade}
+                onChange={(e) => setMedUnidade(e.target.value)}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
+              >
+                {UNIDADES.map((u) => <option key={u}>{u}</option>)}
+              </select>
+            </label>
+
+            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+              Via
+              <select
+                value={medVia}
+                onChange={(e) => setMedVia(e.target.value)}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
+              >
+                {VIAS.map((v) => <option key={v}>{v}</option>)}
+              </select>
+            </label>
+
+          </div>
 
           {/* Color picker */}
           <div>

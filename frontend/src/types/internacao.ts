@@ -4,6 +4,9 @@ export type Medicacao = {
   nome: string;
   horarios: string[];
   cor: string;
+  via: string;
+  unidade: string;
+  quantidade: number;
 };
 
 export type Internacao = {
@@ -12,6 +15,7 @@ export type Internacao = {
   especie: string;
   tutorNome: string;
   tutorTelefone?: string;
+  tutorCpf?: string;
   entradaEm: string;
   status: InternacaoStatus;
   proximaMedicacao: string;
