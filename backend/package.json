@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "setup": "npm install && npm rebuild better-sqlite3 && (test -f .env || cp .env.example .env)",
+    "dev": "npx prisma generate && node scripts/init-db.mjs && tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "db:init": "node scripts/init-db.mjs",
     "test": "vitest run",

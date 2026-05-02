@@ -43,13 +43,12 @@ O banco de dados é criado e populado automaticamente na primeira execução.
 
 ```bash
 cd backend
-npm install
-npm rebuild better-sqlite3 # compila o módulo nativo para seu Node.js
-cp .env.example .env       # cria o arquivo de variáveis de ambiente
-npx prisma generate
-node scripts/init-db.mjs   # cria e popula o banco
-npm run dev                # http://localhost:3001
+npm run setup   # instala dependências, compila módulo nativo e cria o .env
+npm run dev     # gera o client Prisma, inicializa o banco e sobe o servidor
 ```
+
+> `npm run setup` só precisa ser executado uma vez após clonar o repositório
+> ou após trocar a versão do Node.js. Depois disso, `npm run dev` é suficiente.
 
 **Frontend** (em outro terminal)
 
