@@ -16,13 +16,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <body className={`${spaceGrotesk.variable} ${manrope.variable} font-sans`}>
-        <BackendWakeUp />
-        <div className="flex h-screen overflow-hidden bg-slate-50">
-          <Sidebar />
-          <div className="flex-1 overflow-y-auto">
-            {children}
+        <BackendWakeUp>
+          <div className="flex h-screen overflow-hidden bg-slate-50">
+            <Sidebar />
+            <div className="flex-1 overflow-y-auto">
+              {children}
+            </div>
           </div>
-        </div>
+        </BackendWakeUp>
       </body>
     </html>
   );
