@@ -1,4 +1,22 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: cvet-db
+    environment:
+      POSTGRES_USER: cvet
+      POSTGRES_PASSWORD: cvet
+      POSTGRES_DB: cvet
+    ports:
+      - "5432:5432"
+    volumes:
+      - cvet-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cvet -d cvet"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   api:
     build:
       context: ./backend
@@ -6,11 +24,13 @@ services:
     container_name: cvet-api
     ports:
       - "3001:3001"
-    volumes:
-      - cvet-db:/app/prisma
     environment:
       NODE_ENV: production
       PORT: 3001
+      DATABASE_URL: postgresql://cvet:cvet@db:5432/cvet
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   web:

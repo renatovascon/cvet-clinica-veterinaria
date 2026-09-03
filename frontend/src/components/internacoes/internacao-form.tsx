@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Internacao, InternacaoStatus } from '@/types/internacao';
 import { calcularHorarios, FREQUENCIAS } from '@/lib/horarios';
 
 type InternacaoFormProps = {
-  onCreate: (data: Omit<Internacao, 'id' | 'entradaEm'>) => Promise<void>;
+  onCreate: (data: Omit<Internacao, 'id' | 'quantidadeDiarias' | 'valorDiarias' | 'leito'>) => Promise<string | null>;
 };
 
 type FormMed = {
@@ -35,20 +35,45 @@ function defaultFimEm() {
   return d.toISOString().slice(0, 10);
 }
 
+function dateInputValue(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
 export function InternacaoForm({ onCreate }: InternacaoFormProps) {
-  const [petNome, setPetNome]         = useState('');
-  const [especie, setEspecie]         = useState('Canina');
-  const [tutorNome, setTutorNome]     = useState('');
-  const [tutorTelefone, setTutorTelefone] = useState('');
-  const [tutorCpf, setTutorCpf]       = useState('');
+  const [pets, setPets]               = useState<{ id: string; nome: string; especie: string; tutor: { nome: string; telefone: string; cpf?: string | null } }[]>([]);
+  const [petId, setPetId]             = useState('');
+  const [leitos, setLeitos]           = useState<{ id: string; nome: string; tipo: 'N' | 'I'; valorDiaria: number }[]>([]);
+  const [leitoId, setLeitoId]         = useState('');
+  const [entradaEm, setEntradaEm]     = useState(() => dateInputValue(new Date()));
+  const [dataSaida, setDataSaida]     = useState(() => defaultFimEm());
+  const [descricao, setDescricao]     = useState('');
   const [status, setStatus]           = useState<InternacaoStatus>('observacao');
   const [manualHora, setManualHora]   = useState('');
   const [manualNome, setManualNome]   = useState('');
   const [observacao, setObservacao]   = useState('');
   const [medicacoes, setMedicacoes]   = useState<FormMed[]>([]);
   const [submitting, setSubmitting]   = useState(false);
+  const [loadError, setLoadError]     = useState('');
+  const [saveError, setSaveError]     = useState('');
 
   const agora = new Date().toTimeString().slice(0, 5);
+
+  useEffect(() => {
+    Promise.all([fetch('/api/leitos'), fetch('/api/pets')])
+      .then(async ([leitosResponse, petsResponse]) => {
+        if (!leitosResponse.ok || !petsResponse.ok) throw new Error();
+        setLeitos(await leitosResponse.json());
+        setPets(await petsResponse.json());
+      })
+      .catch(() => setLoadError('Não foi possível carregar pets e leitos do banco. Atualize a página e tente novamente.'));
+  }, []);
+
+  const petSelecionado = pets.find((pet) => pet.id === petId);
+  const leitoSelecionado = leitos.find((leito) => leito.id === leitoId);
+  const quantidadeDiarias = entradaEm && dataSaida
+    ? Math.max(1, Math.ceil((new Date(`${dataSaida}T00:00:00`).getTime() - new Date(`${entradaEm}T00:00:00`).getTime()) / 86_400_000))
+    : 0;
+  const valorEstimado = quantidadeDiarias * (leitoSelecionado?.valorDiaria ?? 0);
 
   const autoMed = useMemo(() => {
     const all = medicacoes
@@ -81,7 +106,8 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
 
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!petNome || !tutorNome || !tutorTelefone) return;
+    if (!petSelecionado || !leitoId || !entradaEm || !dataSaida || !descricao) return;
+    setSaveError('');
 
     const proximaMedicacao = proxHora
       ? (proxNome ? `${proxHora} — ${proxNome}` : proxHora)
@@ -95,46 +121,33 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
       }));
 
     setSubmitting(true);
-    await onCreate({
-      petNome, especie, tutorNome, tutorTelefone, tutorCpf: tutorCpf || undefined,
+    const error = await onCreate({
+      petId, petNome: petSelecionado.nome, especie: petSelecionado.especie, tutorNome: petSelecionado.tutor.nome,
+      tutorTelefone: petSelecionado.tutor.telefone, tutorCpf: petSelecionado.tutor.cpf || undefined, leitoId,
+      entradaEm, dataSaida, descricao,
       status, proximaMedicacao, observacao, medicacoes: medicacoesValidas,
     });
     setSubmitting(false);
+    if (error) {
+      setSaveError(error);
+      return;
+    }
 
-    setPetNome(''); setEspecie('Canina'); setTutorNome(''); setTutorTelefone('');
-    setTutorCpf(''); setStatus('observacao'); setManualHora(''); setManualNome('');
+    setPetId(''); setLeitoId(''); setEntradaEm(dateInputValue(new Date())); setDataSaida(defaultFimEm()); setDescricao(''); setStatus('observacao'); setManualHora(''); setManualNome('');
     setObservacao(''); setMedicacoes([]);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-slate-900">Nova internação</h2>
+    <form onSubmit={handleSubmit} className="grid gap-5">
+      {loadError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</p>}
 
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Nome do pet
-        <input
-          value={petNome}
-          onChange={(e) => setPetNome(e.target.value)}
-          className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
-          placeholder="Ex: Mel"
-          required
-        />
-      </label>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Espécie
-          <select
-            value={especie}
-            onChange={(e) => setEspecie(e.target.value)}
-            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
-          >
-            <option>Canina</option>
-            <option>Felina</option>
-            <option>Outros</option>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <label className="grid gap-2 text-sm font-medium text-slate-700">Pet cadastrado
+          <select value={petId} onChange={(e) => setPetId(e.target.value)} required className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss">
+            <option value="">Selecione o pet</option>
+            {pets.map((pet) => <option key={pet.id} value={pet.id}>{pet.nome} · {pet.especie} · {pet.tutor.nome}</option>)}
           </select>
         </label>
-
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           Status
           <select
@@ -148,41 +161,20 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
           </select>
         </label>
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Nome do tutor
-          <input
-            value={tutorNome}
-            onChange={(e) => setTutorNome(e.target.value)}
-            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
-            placeholder="Ex: Ana Lima"
-            required
-          />
-        </label>
-
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Telefone do tutor
-          <input
-            value={tutorTelefone}
-            onChange={(e) => setTutorTelefone(e.target.value)}
-            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
-            placeholder="Ex: 11999990001"
-            required
-          />
-        </label>
-
+      {petSelecionado && <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700"><span className="font-semibold">Tutor:</span> {petSelecionado.tutor.nome} · {petSelecionado.tutor.telefone}</div>}
+      <label className="grid gap-2 text-sm font-medium text-slate-700">
+        Leito
+        <select value={leitoId} onChange={(e) => setLeitoId(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss" required>
+          <option value="">Selecione o leito</option>
+          {leitos.map((leito) => <option key={leito.id} value={leito.id}>Leito {leito.id} - {leito.nome} ({leito.tipo === 'I' ? 'UTI' : 'Normal'}) - R$ {leito.valorDiaria.toFixed(2).replace('.', ',')}/dia</option>)}
+        </select>
+      </label>
+      {leitoSelecionado && <div className="grid gap-2 rounded-xl border border-moss/20 bg-moss/5 p-4 sm:grid-cols-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Leito</p><p className="mt-1 font-semibold text-ink">{leitoSelecionado.id} · {leitoSelecionado.nome}</p></div><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Diária</p><p className="mt-1 font-semibold text-ink">R$ {leitoSelecionado.valorDiaria.toFixed(2).replace('.', ',')}</p></div><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total estimado</p><p className="mt-1 font-semibold text-moss">R$ {valorEstimado.toFixed(2).replace('.', ',')} · {quantidadeDiarias} diária(s)</p></div></div>}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <label className="grid gap-2 text-sm font-medium text-slate-700">Data de entrada<input type="date" value={entradaEm} onChange={(e) => setEntradaEm(e.target.value)} required className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss" /></label>
+        <label className="grid gap-2 text-sm font-medium text-slate-700">Data de saída<input type="date" min={entradaEm} value={dataSaida} onChange={(e) => setDataSaida(e.target.value)} required className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss" /></label>
       </div>
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          CPF do tutor
-          <input
-            value={tutorCpf}
-            onChange={(e) => setTutorCpf(e.target.value)}
-            className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss"
-            placeholder="Ex: 000.000.000-00"
-          />
-        </label>
-
+      <label className="grid gap-2 text-sm font-medium text-slate-700">Descrição da internação<textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} required className="min-h-20 rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss" placeholder="Ex: recuperação pós-operatória" /></label>
       <label className="grid gap-2 text-sm font-medium text-slate-700">
         Observação
         <textarea
@@ -193,9 +185,11 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
         />
       </label>
 
+      {saveError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{saveError}</p>}
+
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || Boolean(loadError)}
         className="rounded-xl bg-moss px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-60"
       >
         {submitting ? 'Registrando...' : 'Registrar internação'}

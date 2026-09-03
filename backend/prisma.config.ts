@@ -7,6 +7,6 @@ export default defineConfig({
     seed: 'node scripts/init-db.mjs',
   },
   datasource: {
-    url: 'file:./prisma/dev.db',
+    url: process.env.DATABASE_URL,
   },
 });

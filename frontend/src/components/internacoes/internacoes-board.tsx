@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, BedDouble, CalendarDays, CircleDollarSign } from 'lucide-react';
 import { Internacao, InternacaoStatus } from '@/types/internacao';
 import { InternacaoCard } from './internacao-card';
 import { InternacaoForm } from './internacao-form';
@@ -34,6 +34,8 @@ export function InternacoesBoard() {
     estaveis:   internacoes.filter((i) => i.status === 'estavel').length,
   }), [internacoes]);
 
+  const totalDiarias = useMemo(() => internacoes.reduce((total, internacao) => total + internacao.valorDiarias, 0), [internacoes]);
+
   const internacoesFiltradas = useMemo(() => {
     const q = busca.toLowerCase().trim();
     return internacoes
@@ -41,15 +43,19 @@ export function InternacoesBoard() {
       .filter((i) => !q || i.petNome.toLowerCase().includes(q) || i.tutorNome.toLowerCase().includes(q));
   }, [internacoes, busca, filtroStatus]);
 
-  async function handleCreate(data: Omit<Internacao, 'id' | 'entradaEm'>) {
+  async function handleCreate(data: Omit<Internacao, 'id' | 'quantidadeDiarias' | 'valorDiarias' | 'leito'>): Promise<string | null> {
     const res = await fetch('/api/internacoes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      return body?.error ?? body?.message ?? 'Não foi possível salvar a internação.';
+    }
     const created: Internacao = await res.json();
     setInternacoes((current) => [created, ...current]);
+    return null;
   }
 
   function toggleStatus(status: InternacaoStatus) {
@@ -57,33 +63,21 @@ export function InternacoesBoard() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      {/* Left: summary + form */}
-      <div className="grid content-start gap-4">
-        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
-          <ResumoItem label="Internados" value={resumo.total} />
-          <ResumoItem
-            label="Críticos" value={resumo.criticos}
-            active={filtroStatus === 'critico'}
-            onClick={() => toggleStatus('critico')}
-          />
-          <ResumoItem
-            label="Observação" value={resumo.observacao}
-            active={filtroStatus === 'observacao'}
-            onClick={() => toggleStatus('observacao')}
-          />
-          <ResumoItem
-            label="Estáveis" value={resumo.estaveis}
-            active={filtroStatus === 'estavel'}
-            onClick={() => toggleStatus('estavel')}
-          />
-        </div>
+    <div className="grid gap-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="font-[family-name:var(--font-display)] text-xl font-semibold text-ink">Nova internação</h2><p className="mt-1 text-sm text-slate-500">Selecione um pet e um leito disponível para o período.</p></div><span className="inline-flex w-fit items-center gap-2 rounded-lg bg-moss/10 px-3 py-2 text-sm font-semibold text-moss"><CalendarDays size={16} /> Período validado</span></div>
         <InternacaoForm onCreate={handleCreate} />
-      </div>
+      </section>
 
-      {/* Right: search + filtered list */}
-      <div className="grid content-start gap-4">
-        {/* Search + status pills */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <ResumoItem label="Internados" value={resumo.total} icon={BedDouble} />
+        <ResumoItem label="Críticos" value={resumo.criticos} icon={CalendarDays} active={filtroStatus === 'critico'} onClick={() => toggleStatus('critico')} />
+        <ResumoItem label="Observação" value={resumo.observacao} icon={CalendarDays} active={filtroStatus === 'observacao'} onClick={() => toggleStatus('observacao')} />
+        <ResumoItem label="Estáveis" value={resumo.estaveis} icon={CalendarDays} active={filtroStatus === 'estavel'} onClick={() => toggleStatus('estavel')} />
+        <ResumoItem label="Diárias previstas" value={`R$ ${totalDiarias.toFixed(2).replace('.', ',')}`} icon={CircleDollarSign} />
+      </section>
+
+      <section className="grid content-start gap-4">
         <div className="flex flex-col gap-3">
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -119,8 +113,7 @@ export function InternacoesBoard() {
           )}
         </div>
 
-        {/* List */}
-        <div className="flex flex-col gap-4 overflow-y-auto pr-1" style={{ maxHeight: '72vh' }}>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {loading && <p className="text-sm text-slate-500">Carregando internações...</p>}
           {error   && <p className="text-sm text-red-500">{error}</p>}
 
@@ -134,28 +127,29 @@ export function InternacoesBoard() {
             <InternacaoCard key={internacao.id} internacao={internacao} />
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
 type ResumoItemProps = {
   label: string;
-  value: number;
+  value: number | string;
+  icon: typeof BedDouble;
   active?: boolean;
   onClick?: () => void;
 };
 
-function ResumoItem({ label, value, active, onClick }: ResumoItemProps) {
-  const base = 'rounded-xl p-4 transition';
+function ResumoItem({ label, value, icon: Icon, active, onClick }: ResumoItemProps) {
+  const base = 'rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition';
   const style = onClick
     ? `cursor-pointer select-none ${active ? 'bg-moss/10 ring-2 ring-moss/40' : 'bg-slate-50 hover:bg-slate-100'}`
-    : 'bg-slate-50';
+    : '';
 
   return (
     <div className={`${base} ${style}`} onClick={onClick}>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-slate-900">{value}</p>
+      <div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p><Icon size={16} className="text-moss" /></div>
+      <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
     </div>
   );
 }

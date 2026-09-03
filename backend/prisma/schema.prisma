@@ -4,7 +4,45 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  nome         String
+  cpf          String?  @unique
+  email        String   @unique
+  senhaHash    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Leito {
+  id           String       @id
+  nome         String
+  tipo         String       @default("N")
+  valorDiaria  Float        @default(0)
+  internacoes  Internacao[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model FormaPagamento {
+  id          String      @id
+  nome        String      @unique
+  pagamentos  Pagamento[]
+  createdAt   DateTime    @default(now())
+}
+
+model Pagamento {
+  id                String          @id @default(cuid())
+  valor             Float
+  pagoEm            DateTime        @default(now())
+  internacaoId      String
+  formaPagamentoId  String
+  internacao        Internacao      @relation(fields: [internacaoId], references: [id], onDelete: Cascade)
+  formaPagamento    FormaPagamento  @relation(fields: [formaPagamentoId], references: [id])
+  createdAt         DateTime        @default(now())
 }
 
 model Tutor {
@@ -37,12 +75,19 @@ model Internacao {
   especie          String
   tutorNome        String
   entradaEm        DateTime    @default(now())
+  dataSaida        DateTime?
+  descricao        String      @default("")
+  quantidadeDiarias Int        @default(0)
+  valorDiarias     Float      @default(0)
   status           String      @default("estavel")
   proximaMedicacao String
   observacao       String      @default("")
   petId            String?
   pet              Pet?        @relation(fields: [petId], references: [id])
+  leitoId          String?
+  leito            Leito?      @relation(fields: [leitoId], references: [id])
   medicacoes       Medicacao[]
+  pagamentos       Pagamento[]
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 }

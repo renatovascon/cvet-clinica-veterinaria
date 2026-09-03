@@ -1,12 +1,10 @@
 # ── Stage 1: builder ──────────────────────────────
 FROM node:22-alpine AS builder
 
-RUN apk add --no-cache python3 make g++
-
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 RUN npx prisma generate
@@ -28,7 +26,7 @@ COPY --from=builder /app/prisma/schema.prisma      ./prisma/schema.prisma
 COPY --from=builder /app/prisma/migrations         ./prisma/migrations
 
 COPY docker-entrypoint.sh ./
-RUN chmod +x ./docker-entrypoint.sh
+RUN sed -i 's/\r$//' ./docker-entrypoint.sh && chmod +x ./docker-entrypoint.sh
 
 EXPOSE 3001
 

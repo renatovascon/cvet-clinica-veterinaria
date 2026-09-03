@@ -18,11 +18,11 @@ const medicacaoSchema = z.object({
 });
 
 const createSchema = z.object({
-  petNome:          z.string().min(1),
-  especie:          z.string().min(1),
-  tutorNome:        z.string().min(1),
-  tutorTelefone:    z.string().min(1),
-  tutorCpf:         z.string().optional(),
+  petId:            z.string().min(1),
+  leitoId:          z.string().trim().min(1),
+  entradaEm:        z.string().date(),
+  dataSaida:        z.string().date(),
+  descricao:        z.string().trim().min(1),
   status:           statusSchema.default('estavel'),
   proximaMedicacao: z.string().optional().default(''),
   observacao:       z.string().optional().default(''),
@@ -35,7 +35,12 @@ const updateSchema = z.object({
   observacao:       z.string().optional(),
 });
 
-const petInclude = { pet: { include: { tutor: true } } } as const;
+const internacaoInclude = { pet: { include: { tutor: true } }, leito: true } as const;
+
+function calcularDiarias(entradaEm: Date, dataSaida: Date, valorDiaria: number) {
+  const dias = Math.ceil((dataSaida.getTime() - entradaEm.getTime()) / 86_400_000);
+  return { quantidadeDiarias: Math.max(1, dias), valorDiarias: Math.max(1, dias) * valorDiaria };
+}
 
 function parseMeds(internacao: Record<string, unknown> & { medicacoes?: { horarios: string }[] }) {
   return {
@@ -53,41 +58,50 @@ export const internacoesRoutes = new Hono()
   .get('/', async (c) => {
     const rows = await prisma.internacao.findMany({
       orderBy: { entradaEm: 'desc' },
-      include: { ...petInclude, medicacoes: true },
+      include: { ...internacaoInclude, medicacoes: true },
     });
     return c.json(rows.map(parseMeds));
   })
 
   .post('/', zValidator('json', createSchema), async (c) => {
-    const { tutorTelefone, tutorCpf, medicacoes, ...data } = c.req.valid('json');
+    const { medicacoes, petId, ...data } = c.req.valid('json');
+    const entradaEm = new Date(`${data.entradaEm}T00:00:00.000Z`);
+    const dataSaida = new Date(`${data.dataSaida}T00:00:00.000Z`);
 
-    let tutor = await prisma.tutor.findFirst({
-      where: { nome: data.tutorNome, telefone: tutorTelefone },
+    if (dataSaida < entradaEm) return c.json({ error: 'A data de saída deve ser posterior à entrada.' }, 400);
+
+    const leito = await prisma.leito.findUnique({ where: { id: data.leitoId } });
+    if (!leito) return c.json({ error: 'Selecione um leito válido.' }, 400);
+
+    const conflito = await prisma.internacao.findFirst({
+      where: {
+        leitoId: leito.id,
+        entradaEm: { lte: dataSaida },
+        dataSaida: { gte: entradaEm },
+      },
+      select: { petNome: true, entradaEm: true, dataSaida: true },
     });
-    if (!tutor) {
-      tutor = await prisma.tutor.create({
-        data: { nome: data.tutorNome, telefone: tutorTelefone, cpf: tutorCpf ?? null },
-      });
-    } else if (tutorCpf && !tutor.cpf) {
-      tutor = await prisma.tutor.update({
-        where: { id: tutor.id },
-        data: { cpf: tutorCpf },
-      });
+    if (conflito) {
+      return c.json({
+        error: `O leito ${leito.id} já está reservado para ${conflito.petNome} no período selecionado.`,
+      }, 409);
     }
 
-    let pet = await prisma.pet.findFirst({
-      where: { nome: data.petNome, tutorId: tutor.id },
-    });
-    if (!pet) {
-      pet = await prisma.pet.create({
-        data: { nome: data.petNome, especie: data.especie, tutorId: tutor.id },
-      });
-    }
+    const diarias = calcularDiarias(entradaEm, dataSaida, leito.valorDiaria);
+
+    const pet = await prisma.pet.findUnique({ where: { id: petId }, include: { tutor: true } });
+    if (!pet) return c.json({ error: 'Pet não encontrado.' }, 404);
 
     const internacao = await prisma.internacao.create({
       data: {
         ...data,
+        entradaEm,
+        dataSaida,
+        ...diarias,
         petId: pet.id,
+        petNome: pet.nome,
+        especie: pet.especie,
+        tutorNome: pet.tutor.nome,
         medicacoes: {
           create: medicacoes.map((m) => ({
             nome:            m.nome,
@@ -102,7 +116,7 @@ export const internacoesRoutes = new Hono()
           })),
         },
       },
-      include: { ...petInclude, medicacoes: true },
+      include: { ...internacaoInclude, medicacoes: true },
     });
     return c.json(parseMeds(internacao), 201);
   })
@@ -110,7 +124,7 @@ export const internacoesRoutes = new Hono()
   .get('/:id', async (c) => {
     const row = await prisma.internacao.findUnique({
       where: { id: c.req.param('id') },
-      include: { ...petInclude, medicacoes: true },
+      include: { ...internacaoInclude, medicacoes: true },
     });
     if (!row) return c.json({ error: 'Internação não encontrada.' }, 404);
     return c.json(parseMeds(row));
@@ -120,7 +134,7 @@ export const internacoesRoutes = new Hono()
     const row = await prisma.internacao.update({
       where: { id: c.req.param('id') },
       data: c.req.valid('json'),
-      include: { ...petInclude, medicacoes: true },
+      include: { ...internacaoInclude, medicacoes: true },
     });
     return c.json(parseMeds(row));
   })

@@ -106,6 +106,7 @@ export function InternacaoDetalhe({ id }: Props) {
   const entrada = new Date(internacao.entradaEm).toLocaleString('pt-BR', {
     dateStyle: 'short', timeStyle: 'short',
   });
+  const saida = internacao.dataSaida ? new Date(internacao.dataSaida).toLocaleDateString('pt-BR') : 'Não definida';
 
   return (
     <main className="flex flex-col gap-6 p-6 lg:p-8">
@@ -133,9 +134,12 @@ export function InternacaoDetalhe({ id }: Props) {
       {/* Info grid */}
       <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <InfoItem label="Entrada" value={entrada} />
+        <InfoItem label="Saída" value={saida} />
+        <InfoItem label="Diárias" value={`${internacao.quantidadeDiarias} · R$ ${internacao.valorDiarias.toFixed(2).replace('.', ',')}`} />
         <InfoItem label="Próxima medicação" value={resolverProximaMedicacao(internacao)} />
         <InfoItem label="Espécie" value={internacao.especie} />
         {internacao.observacao && <InfoItem label="Observação" value={internacao.observacao} />}
+        <InfoItem label="Descrição" value={internacao.descricao} />
       </div>
 
       {/* Status control */}

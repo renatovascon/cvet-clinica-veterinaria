@@ -3,11 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, BedDouble, BarChart3, Menu, X, Stethoscope, CalendarClock } from 'lucide-react';
+import { LayoutDashboard, BedDouble, BarChart3, Menu, X, Stethoscope, CalendarClock, UsersRound, WalletCards, UserCog } from 'lucide-react';
 
 const navItems = [
   { href: '/',            label: 'Início',            icon: LayoutDashboard },
   { href: '/internacoes', label: 'Internações',        icon: BedDouble },
+  { href: '/leitos',      label: 'Leitos',             icon: BedDouble },
+  { href: '/tutores',     label: 'Tutores',            icon: UsersRound },
+  { href: '/financeiro',  label: 'Financeiro',         icon: WalletCards },
+  { href: '/usuarios',    label: 'Usuários',           icon: UserCog },
   { href: '/mapa',        label: 'Mapa de Execução',   icon: CalendarClock },
   { href: '/analytics',  label: 'Análise de Dados',   icon: BarChart3 },
 ];
