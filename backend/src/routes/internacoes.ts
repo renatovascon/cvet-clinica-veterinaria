@@ -8,6 +8,7 @@ const statusSchema = z.enum(['estavel', 'observacao', 'critico']);
 
 const medicacaoSchema = z.object({
   nome:            z.string().min(1),
+  descricao:       z.string().trim().optional().default(''),
   primeiroHorario: z.string().regex(/^\d{2}:\d{2}$/),
   frequenciaHoras: z.number().int().positive(),
   fimEm:           z.string().optional(),
@@ -15,6 +16,8 @@ const medicacaoSchema = z.object({
   via:             z.string().default('Oral'),
   unidade:         z.string().default('mg'),
   quantidade:      z.number().positive().default(1),
+  valorDose:       z.number().min(0).default(0),
+  dosesAplicadas:  z.number().int().min(0).default(0),
 });
 
 const createSchema = z.object({
@@ -57,6 +60,7 @@ export const internacoesRoutes = new Hono()
   // ── Internações ──────────────────────────────────────────────
   .get('/', async (c) => {
     const rows = await prisma.internacao.findMany({
+      where: { baixa: false },
       orderBy: { entradaEm: 'desc' },
       include: { ...internacaoInclude, medicacoes: true },
     });
@@ -110,6 +114,8 @@ export const internacoesRoutes = new Hono()
             via:             m.via,
             unidade:         m.unidade,
             quantidade:      m.quantidade,
+            valorDose:       m.valorDose,
+            dosesAplicadas:  m.dosesAplicadas,
             frequenciaHoras: m.frequenciaHoras,
             primeiroHorario: m.primeiroHorario,
             fimEm:           m.fimEm ? new Date(m.fimEm) : null,
@@ -146,16 +152,19 @@ export const internacoesRoutes = new Hono()
 
   // ── Medicações ───────────────────────────────────────────────
   .post('/:id/medicacoes', zValidator('json', medicacaoSchema), async (c) => {
-    const { nome, primeiroHorario, frequenciaHoras, fimEm, cor, via, unidade, quantidade } = c.req.valid('json');
+    const { nome, descricao, primeiroHorario, frequenciaHoras, fimEm, cor, via, unidade, quantidade, valorDose, dosesAplicadas } = c.req.valid('json');
     const horarios = calcularHorarios(primeiroHorario, frequenciaHoras);
     const med = await prisma.medicacao.create({
       data: {
         nome,
+        descricao,
         horarios:        JSON.stringify(horarios),
         cor,
         via,
         unidade,
         quantidade,
+        valorDose,
+        dosesAplicadas,
         frequenciaHoras,
         primeiroHorario,
         fimEm:           fimEm ? new Date(fimEm) : null,
@@ -163,6 +172,29 @@ export const internacoesRoutes = new Hono()
       },
     });
     return c.json({ ...med, horarios }, 201);
+  })
+
+  .patch('/:id/medicacoes/:medId', zValidator('json', medicacaoSchema), async (c) => {
+    const { nome, descricao, primeiroHorario, frequenciaHoras, fimEm, cor, via, unidade, quantidade, valorDose, dosesAplicadas } = c.req.valid('json');
+    const horarios = calcularHorarios(primeiroHorario, frequenciaHoras);
+    const med = await prisma.medicacao.update({
+      where: { id: c.req.param('medId'), internacaoId: c.req.param('id') },
+      data: {
+        nome,
+        descricao,
+        horarios: JSON.stringify(horarios),
+        cor,
+        via,
+        unidade,
+        quantidade,
+        valorDose,
+        dosesAplicadas,
+        frequenciaHoras,
+        primeiroHorario,
+        fimEm: fimEm ? new Date(fimEm) : null,
+      },
+    });
+    return c.json({ ...med, horarios });
   })
 
   .delete('/:id/medicacoes/:medId', async (c) => {

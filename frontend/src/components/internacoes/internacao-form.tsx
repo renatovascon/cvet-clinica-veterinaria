@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Internacao, InternacaoStatus } from '@/types/internacao';
+import { InternacaoStatus, NovaInternacao } from '@/types/internacao';
 import { calcularHorarios, FREQUENCIAS } from '@/lib/horarios';
 
 type InternacaoFormProps = {
-  onCreate: (data: Omit<Internacao, 'id' | 'quantidadeDiarias' | 'valorDiarias' | 'leito'>) => Promise<string | null>;
+  onCreate: (data: NovaInternacao) => Promise<string | null>;
 };
 
 type FormMed = {
@@ -17,6 +17,8 @@ type FormMed = {
   via: string;
   unidade: string;
   quantidade: number;
+  valorDose: number;
+  dosesAplicadas: number;
 };
 
 const statusOptions: { value: InternacaoStatus; label: string }[] = [
@@ -92,7 +94,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
     setMedicacoes((prev) => [
       ...prev,
       { nome: '', primeiroHorario: '08:00', frequenciaHoras: 8, fimEm: defaultFimEm(),
-        cor: 'bg-teal-500', via: 'Oral', unidade: 'mg', quantidade: 1 },
+        cor: 'bg-teal-500', via: 'Oral', unidade: 'mg', quantidade: 1, valorDose: 0, dosesAplicadas: 0 },
     ]);
   }
 

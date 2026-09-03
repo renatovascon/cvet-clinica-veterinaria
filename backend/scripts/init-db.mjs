@@ -67,6 +67,7 @@ await client.query(`
     "quantidadeDiarias" INTEGER  NOT NULL DEFAULT 0,
     "valorDiarias"     DOUBLE PRECISION NOT NULL DEFAULT 0,
     "status"           TEXT      NOT NULL DEFAULT 'estavel',
+    "baixa"            BOOLEAN   NOT NULL DEFAULT FALSE,
     "proximaMedicacao" TEXT      NOT NULL,
     "observacao"       TEXT      NOT NULL DEFAULT '',
     "petId"            TEXT      REFERENCES "Pet"("id"),
@@ -80,11 +81,14 @@ await client.query(`
   CREATE TABLE IF NOT EXISTS "Medicacao" (
     "id"              TEXT             NOT NULL PRIMARY KEY,
     "nome"            TEXT             NOT NULL,
+    "descricao"       TEXT             NOT NULL DEFAULT '',
     "horarios"        TEXT             NOT NULL DEFAULT '[]',
     "cor"             TEXT             NOT NULL DEFAULT 'bg-teal-500',
     "via"             TEXT             NOT NULL DEFAULT 'Oral',
     "unidade"         TEXT             NOT NULL DEFAULT 'mg',
     "quantidade"      DOUBLE PRECISION NOT NULL DEFAULT 1,
+    "valorDose"       DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "dosesAplicadas"  INTEGER          NOT NULL DEFAULT 0,
     "frequenciaHoras" INTEGER          NOT NULL DEFAULT 8,
     "primeiroHorario" TEXT             NOT NULL DEFAULT '08:00',
     "fimEm"           TIMESTAMP,
@@ -124,10 +128,14 @@ await client.query(`ALTER TABLE "Internacao" ADD COLUMN IF NOT EXISTS "dataSaida
 await client.query(`ALTER TABLE "Internacao" ADD COLUMN IF NOT EXISTS "descricao" TEXT NOT NULL DEFAULT ''`);
 await client.query(`ALTER TABLE "Internacao" ADD COLUMN IF NOT EXISTS "quantidadeDiarias" INTEGER NOT NULL DEFAULT 0`);
 await client.query(`ALTER TABLE "Internacao" ADD COLUMN IF NOT EXISTS "valorDiarias" DOUBLE PRECISION NOT NULL DEFAULT 0`);
+await client.query(`ALTER TABLE "Internacao" ADD COLUMN IF NOT EXISTS "baixa" BOOLEAN NOT NULL DEFAULT FALSE`);
 await client.query(`ALTER TABLE "Tutor" ADD COLUMN IF NOT EXISTS "cpf" TEXT`);
 await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "via" TEXT NOT NULL DEFAULT 'Oral'`);
 await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "unidade" TEXT NOT NULL DEFAULT 'mg'`);
 await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "quantidade" DOUBLE PRECISION NOT NULL DEFAULT 1`);
+await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "descricao" TEXT NOT NULL DEFAULT ''`);
+await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "valorDose" DOUBLE PRECISION NOT NULL DEFAULT 0`);
+await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "dosesAplicadas" INTEGER NOT NULL DEFAULT 0`);
 await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "frequenciaHoras" INTEGER NOT NULL DEFAULT 8`);
 await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "primeiroHorario" TEXT NOT NULL DEFAULT '08:00'`);
 await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "fimEm" TIMESTAMP`);
@@ -186,6 +194,18 @@ await client.query(`
   WHERE internacao."leitoId" = leito.id
     AND internacao.id IN ('seed-1', 'seed-2', 'seed-3')
     AND internacao."dataSaida" IS NULL
+`);
+
+await client.query(`
+  UPDATE "Internacao" AS internacao
+  SET baixa = TRUE
+  WHERE baixa = FALSE
+    AND "valorDiarias" > 0
+    AND COALESCE((
+      SELECT SUM(pagamento.valor)
+      FROM "Pagamento" AS pagamento
+      WHERE pagamento."internacaoId" = internacao.id
+    ), 0) >= "valorDiarias"
 `);
 
 const { rows: [{ count }] } = await client.query('SELECT COUNT(*)::int as count FROM "Internacao"');

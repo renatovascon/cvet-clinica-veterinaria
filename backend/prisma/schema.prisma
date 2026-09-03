@@ -80,6 +80,7 @@ model Internacao {
   quantidadeDiarias Int        @default(0)
   valorDiarias     Float      @default(0)
   status           String      @default("estavel")
+  baixa            Boolean     @default(false)
   proximaMedicacao String
   observacao       String      @default("")
   petId            String?
@@ -95,11 +96,14 @@ model Internacao {
 model Medicacao {
   id               String     @id @default(cuid())
   nome             String
+  descricao        String     @default("")
   horarios         String     @default("[]")
   cor              String     @default("bg-teal-500")
   via              String     @default("Oral")
   unidade          String     @default("mg")
   quantidade       Float      @default(1)
+  valorDose        Float      @default(0)
+  dosesAplicadas   Int        @default(0)
   frequenciaHoras  Int        @default(8)
   primeiroHorario  String     @default("08:00")
   fimEm            DateTime?

@@ -10,20 +10,31 @@ const pagamentoSchema = z.object({
   pagoEm: z.string().date().optional(),
 });
 
-function resumoFinanceiro(internacao: { entradaEm: Date; dataSaida: Date | null; leito: { valorDiaria: number } | null; pagamentos: { valor: number }[] }) {
+function resumoFinanceiro(internacao: { entradaEm: Date; dataSaida: Date | null; baixa: boolean; leito: { valorDiaria: number } | null; medicacoes: { valorDose: number; dosesAplicadas: number }[]; pagamentos: { valor: number }[] }) {
   const hoje = new Date();
   const fim = internacao.dataSaida && internacao.dataSaida < hoje ? internacao.dataSaida : hoje;
   const diarias = Math.max(1, Math.ceil((fim.getTime() - internacao.entradaEm.getTime()) / 86_400_000));
-  const valorTotal = diarias * (internacao.leito?.valorDiaria ?? 0);
+  const valorDiarias = diarias * (internacao.leito?.valorDiaria ?? 0);
+  const valorMedicacoes = internacao.medicacoes.reduce((total, medicacao) => total + medicacao.valorDose * medicacao.dosesAplicadas, 0);
+  const valorTotal = valorDiarias + valorMedicacoes;
   const valorPago = internacao.pagamentos.reduce((total, pagamento) => total + pagamento.valor, 0);
-  return { diarias, valorTotal, valorPago, saldo: Math.max(0, valorTotal - valorPago), encerrada: Boolean(internacao.dataSaida && internacao.dataSaida <= hoje) };
+  return { diarias, valorDiarias, valorMedicacoes, valorTotal, valorPago, saldo: Math.max(0, valorTotal - valorPago), encerrada: internacao.baixa };
+}
+
+function calcularCobranca(internacao: { entradaEm: Date; leito: { valorDiaria: number } | null; medicacoes: { valorDose: number; dosesAplicadas: number }[]; pagamentos: { valor: number }[] }, encerradaEm: Date) {
+  const diarias = Math.max(1, Math.ceil((encerradaEm.getTime() - internacao.entradaEm.getTime()) / 86_400_000));
+  const valorDiarias = diarias * (internacao.leito?.valorDiaria ?? 0);
+  const valorMedicacoes = internacao.medicacoes.reduce((total, medicacao) => total + medicacao.valorDose * medicacao.dosesAplicadas, 0);
+  const valorTotal = valorDiarias + valorMedicacoes;
+  const valorPago = internacao.pagamentos.reduce((total, pagamento) => total + pagamento.valor, 0);
+  return { diarias, valorDiarias, valorMedicacoes, valorTotal, saldo: Math.max(0, valorTotal - valorPago) };
 }
 
 export const financeiroRoutes = new Hono()
   .get('/', async (c) => {
     const [internacoes, formasPagamento] = await Promise.all([
       prisma.internacao.findMany({
-        include: { pet: { include: { tutor: true } }, leito: true, pagamentos: { include: { formaPagamento: true }, orderBy: { pagoEm: 'desc' } } },
+        include: { pet: { include: { tutor: true } }, leito: true, medicacoes: true, pagamentos: { include: { formaPagamento: true }, orderBy: { pagoEm: 'desc' } } },
         orderBy: { entradaEm: 'desc' },
       }),
       prisma.formaPagamento.findMany({ orderBy: { nome: 'asc' } }),
@@ -32,9 +43,29 @@ export const financeiroRoutes = new Hono()
   })
   .post('/pagamentos', zValidator('json', pagamentoSchema), async (c) => {
     const { internacaoId, formaPagamentoId, valor, pagoEm } = c.req.valid('json');
-    const pagamento = await prisma.pagamento.create({
-      data: { internacaoId, formaPagamentoId, valor, pagoEm: pagoEm ? new Date(`${pagoEm}T12:00:00.000Z`) : new Date() },
-      include: { formaPagamento: true },
+    const encerradaEm = pagoEm ? new Date(`${pagoEm}T12:00:00.000Z`) : new Date();
+    const internacao = await prisma.internacao.findUnique({
+      where: { id: internacaoId },
+      include: { leito: true, medicacoes: true, pagamentos: true },
+    });
+    if (!internacao) return c.json({ error: 'Internação não encontrada.' }, 404);
+    if (internacao.baixa) return c.json({ error: 'Esta internação já foi encerrada.' }, 409);
+
+    const cobranca = calcularCobranca(internacao, encerradaEm);
+    if (Math.abs(valor - cobranca.saldo) > 0.01) {
+      return c.json({ error: `O pagamento deve quitar o saldo de R$ ${cobranca.saldo.toFixed(2)}.` }, 400);
+    }
+
+    const pagamento = await prisma.$transaction(async (tx) => {
+      const registrado = await tx.pagamento.create({
+        data: { internacaoId, formaPagamentoId, valor, pagoEm: encerradaEm },
+        include: { formaPagamento: true },
+      });
+      await tx.internacao.update({
+        where: { id: internacaoId },
+        data: { baixa: true, dataSaida: encerradaEm, quantidadeDiarias: cobranca.diarias, valorDiarias: cobranca.valorDiarias },
+      });
+      return registrado;
     });
     return c.json(pagamento, 201);
   });
