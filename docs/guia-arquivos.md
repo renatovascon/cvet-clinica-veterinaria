@@ -67,9 +67,8 @@ O frontend usa `fetch('/api/...')`. O arquivo de configuração do Next redireci
 | Arquivo | Responsabilidade |
 | --- | --- |
 | `backend/prisma/schema.prisma` | Fonte de verdade do modelo Prisma. Define Usuario, Tutor, Pet, Leito, Internacao, Medicacao, Pagamento e FormaPagamento, suas colunas e relações. `Medicacao` é relacionada a `Internacao` por `internacaoId`; `baixa` identifica internações quitadas/encerradas. |
-| `backend/prisma/seed.ts` | Script de seed configurado pelo Prisma para popular dados de desenvolvimento quando utilizado. |
 | `backend/prisma/migrations/migration_lock.toml` | Registra que as migrations do projeto usam PostgreSQL. Não deve ser alterado manualmente. |
-| `backend/scripts/init-db.mjs` | Inicialização idempotente usada pelo container: cria tabelas, adiciona colunas em bancos antigos, garante dados base e marca como baixa internações previamente quitadas. |
+| `backend/scripts/init-db.mjs` | Inicialização idempotente usada pelo container: cria tabelas, adiciona colunas compatíveis, remove os IDs de demonstração de versões anteriores e cria apenas o usuário administrativo e as formas de pagamento de referência. Não cria dados clínicos. |
 
 ### Testes
 

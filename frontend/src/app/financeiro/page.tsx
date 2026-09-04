@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { WalletCards } from 'lucide-react';
 
 type FormaPagamento = { id: string; nome: string };
-type MedicacaoCobrada = { id: string; nome: string; valorDose: number; dosesAplicadas: number };
+type MedicacaoCobrada = { id: string; nome: string; quantidade: number; unidade: string; valorDose: number; dosesAplicadas: number };
 type ItemFinanceiro = {
   id: string;
   petNome: string;
@@ -58,5 +58,5 @@ export default function FinanceiroPage() {
 
 function MedicacoesAplicadas({ medicacoes }: { medicacoes: MedicacaoCobrada[] }) {
   const aplicadas = medicacoes.filter((medicacao) => medicacao.dosesAplicadas > 0);
-  return <div className="mt-4 overflow-x-auto rounded-md border border-slate-200"><table className="w-full min-w-[520px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-3 py-2 font-semibold">Medicação aplicada</th><th className="px-3 py-2 font-semibold">Doses</th><th className="px-3 py-2 font-semibold">Preço/dose</th><th className="px-3 py-2 text-right font-semibold">Subtotal</th></tr></thead><tbody className="divide-y divide-slate-100">{aplicadas.map((medicacao) => <tr key={medicacao.id}><td className="px-3 py-2 text-slate-800">{medicacao.nome}</td><td className="px-3 py-2">{medicacao.dosesAplicadas}</td><td className="px-3 py-2">{money(medicacao.valorDose)}</td><td className="px-3 py-2 text-right font-medium">{money(medicacao.valorDose * medicacao.dosesAplicadas)}</td></tr>)}{aplicadas.length === 0 && <tr><td colSpan={4} className="px-3 py-3 text-slate-500">Nenhuma dose aplicada registrada.</td></tr>}</tbody></table></div>;
+  return <div className="mt-4 overflow-x-auto rounded-md border border-slate-200"><table className="w-full min-w-[680px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-3 py-2 font-semibold">Medicação aplicada</th><th className="px-3 py-2 font-semibold">Unidade por dose</th><th className="px-3 py-2 font-semibold">Unidades aplicadas</th><th className="px-3 py-2 font-semibold">Preço unitário</th><th className="px-3 py-2 text-right font-semibold">Valor total</th></tr></thead><tbody className="divide-y divide-slate-100">{aplicadas.map((medicacao) => <tr key={medicacao.id}><td className="px-3 py-2 text-slate-800">{medicacao.nome}</td><td className="px-3 py-2">{medicacao.quantidade} {medicacao.unidade}</td><td className="px-3 py-2">{medicacao.dosesAplicadas} dose(s)</td><td className="px-3 py-2">{money(medicacao.valorDose)}</td><td className="px-3 py-2 text-right font-medium">{money(medicacao.valorDose * medicacao.dosesAplicadas)}</td></tr>)}{aplicadas.length === 0 && <tr><td colSpan={5} className="px-3 py-3 text-slate-500">Nenhuma dose aplicada registrada.</td></tr>}</tbody></table></div>;
 }

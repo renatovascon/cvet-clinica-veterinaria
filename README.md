@@ -33,7 +33,7 @@ docker compose up --build
 | Frontend  | http://localhost:3000   |
 | API       | http://localhost:3001   |
 
-O banco de dados é criado e populado automaticamente na primeira execução.
+O banco de dados é criado automaticamente na primeira execução, sem dados clínicos de demonstração. Cadastre usuários, leitos, tutores e pets pela aplicação.
 
 ---
 

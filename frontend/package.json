@@ -10,11 +10,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "db:seed": "npx tsx prisma/seed.ts"
-  },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
