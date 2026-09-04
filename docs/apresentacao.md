@@ -29,25 +29,25 @@ Fala sugerida: explicar que o sistema não é apenas cadastro, mas controle do c
 Fala sugerida: reforçar que o projeto foi construído com base em uma necessidade real.
 
 ## Slide 5: Solução proposta
-- Cadastro de tutores, pets e internações.
-- Registro de evolução clínica diária.
-- Alertas para medicações e pendências.
-- Dashboard com visão do estado dos pacientes.
+- CRUD de tutores e pets, com catálogo pesquisável de raças caninas e felinas.
+- Internações vinculadas a pets e leitos, com bloqueio de conflitos de período.
+- Medicações com horários, doses aplicadas e preço unitário.
+- Dashboard operacional, mapa de execução e financeiro com baixa após quitação.
 
 Fala sugerida: mostrar que a solução organiza o atendimento e ajuda a tomada de decisão.
 
 ## Slide 6: Arquitetura e tecnologias
-- Arquitetura base: MVC.
-- Padrões previstos: Repository, Observer, Strategy e Adapter.
+- Frontend Next.js com TypeScript e Tailwind CSS.
+- API Hono com validação Zod e Prisma.
 - Banco de dados: PostgreSQL.
-- Interface: Shadcn/UI ou Material UI.
-- Autenticação: NextAuth ou Firebase.
+- Infraestrutura local: Docker Compose com healthchecks.
 
 Fala sugerida: explicar que a arquitetura foi pensada para organização, manutenção e escalabilidade.
 
 ## Slide 7: Requisitos principais
 - Validação de datas na internação.
-- Dashboard em tempo real.
+- Dashboard operacional por status e espécie.
+- Soma de diárias e medicações aplicadas no fechamento.
 - Tempo de resposta das rotas principais abaixo de 2 segundos.
 - Comunicação segura via HTTPS.
 
@@ -57,22 +57,21 @@ Fala sugerida: ligar os requisitos técnicos à confiabilidade do sistema.
 - Metodologia baseada em Design Thinking.
 - Etapas: ouvir, criar e implementar.
 - O projeto já teve levantamento de requisitos, wireframes e relatório parcial.
-- A implementação ainda está em fase inicial.
+- O MVP possui módulos de cadastros, internações, financeiro, mapa e analytics em execução.
 
 Fala sugerida: mostrar que o projeto já tem base validada, mas ainda está evoluindo.
 
 ## Slide 9: Resultados preliminares
-- Wireframes validados com a comunidade externa.
-- Estrutura inicial do sistema definida.
-- Planejamento do banco de dados, nuvem e integração futura.
+- Fluxo de internação com reserva de leito e prevenção de sobreposição.
+- Financeiro com composição de diárias e medicamentos aplicados.
+- Execução local reproduzível com Docker Compose.
 
 Fala sugerida: destacar que a solução já tem direção clara e validação prática.
 
 ## Slide 10: Próximos passos
-- Desenvolver o MVP.
-- Implementar o módulo de análise de dados.
-- Aplicar acessibilidade e testes.
-- Preparar deploy e apresentação final.
+- Ampliar testes de integração e interface.
+- Evoluir autenticação e controle de permissões.
+- Adicionar prontuário e evolução clínica estruturada.
 
 Fala sugerida: fechar mostrando o caminho até a entrega final do projeto.
 

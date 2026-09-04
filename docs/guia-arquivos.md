@@ -31,7 +31,7 @@ O frontend usa `fetch('/api/...')`. O arquivo de configuração do Next redireci
 | `backend/package.json` | Define dependências da API e scripts de desenvolvimento, inicialização do banco, testes e typecheck. |
 | `backend/tsconfig.json` | Configura a compilação TypeScript do backend, resolução de módulos Node e verificações estritas. |
 | `backend/vitest.config.ts` | Configura o Vitest para executar testes da API no ambiente Node. |
-| `backend/prisma.config.ts` | Informa ao Prisma a localização do schema, migrations e comando de seed. |
+| `backend/prisma.config.ts` | Informa ao Prisma a localização do schema, migrations e URL da fonte de dados. |
 | `backend/Dockerfile` | Cria a imagem da API em múltiplos estágios, instala dependências, gera o cliente Prisma e copia somente os artefatos necessários para execução. |
 | `backend/docker-entrypoint.sh` | Inicializa ou atualiza o banco pelo script SQL e inicia a API Hono. |
 
@@ -48,11 +48,12 @@ O frontend usa `fetch('/api/...')`. O arquivo de configuração do Next redireci
 | --- | --- |
 | `backend/src/routes/auth.ts` | Valida login por e-mail e senha, verifica o hash com `scrypt` e retorna os dados do usuário autenticado. |
 | `backend/src/routes/usuarios.ts` | Lista e cadastra usuários, valida campos e impede duplicidade de CPF ou e-mail. |
-| `backend/src/routes/tutores.ts` | Lista e cadastra tutores, incluindo os pets informados durante o cadastro. |
+| `backend/src/routes/tutores.ts` | Implementa CRUD de tutores e pets; protege exclusões que afetariam pets com histórico de internações. |
 | `backend/src/routes/pets.ts` | Lista pets junto dos dados de seus tutores. |
 | `backend/src/routes/leitos.ts` | Lista e cadastra leitos normais ou UTI, com valor de diária e validações de identificação. |
 | `backend/src/routes/internacoes.ts` | Lista apenas internações sem baixa, cria internações com validação de leito e período, consulta detalhes, altera dados clínicos e gerencia as medicações vinculadas. Também calcula horários a partir da frequência de cada medicação. |
-| `backend/src/routes/financeiro.ts` | Calcula diárias, total, pagamentos e saldo. Ao quitar o saldo, registra o pagamento, encerra a internação e marca a flag `baixa` como verdadeira. |
+| `backend/src/routes/financeiro.ts` | Calcula diárias, medicações aplicadas, total, pagamentos e saldo. A quitação integral encerra e baixa a internação. |
+| `backend/src/routes/racas.ts` | Lista raças persistidas e filtradas pelos enums de espécie canino e felino. |
 | `backend/src/routes/analytics.ts` | Produz os dados agregados consumidos pelo dashboard: totais, status, espécies e volume por dia. |
 
 ### Bibliotecas internas
@@ -66,9 +67,10 @@ O frontend usa `fetch('/api/...')`. O arquivo de configuração do Next redireci
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `backend/prisma/schema.prisma` | Fonte de verdade do modelo Prisma. Define Usuario, Tutor, Pet, Leito, Internacao, Medicacao, Pagamento e FormaPagamento, suas colunas e relações. `Medicacao` é relacionada a `Internacao` por `internacaoId`; `baixa` identifica internações quitadas/encerradas. |
+| `backend/prisma/schema.prisma` | Fonte de verdade do modelo Prisma. Define Usuario, Tutor, Pet, Raca, Leito, Internacao, Medicacao, Pagamento, FormaPagamento e o enum `EspeciePet`. |
 | `backend/prisma/migrations/migration_lock.toml` | Registra que as migrations do projeto usam PostgreSQL. Não deve ser alterado manualmente. |
-| `backend/scripts/init-db.mjs` | Inicialização idempotente usada pelo container: cria tabelas, adiciona colunas compatíveis, remove os IDs de demonstração de versões anteriores e cria apenas o usuário administrativo e as formas de pagamento de referência. Não cria dados clínicos. |
+| `backend/scripts/init-db.mjs` | Inicialização idempotente usada pelo container: cria e compatibiliza tabelas, migra o catálogo antigo e inclui formas de pagamento e raças de referência. Não cria dados clínicos. |
+| `backend/scripts/seed-demo.mjs` | Seed manual opcional para criar 10 tutores e 18 pets fictícios com espécies e raças variadas; não é executado automaticamente. |
 
 ### Testes
 
@@ -122,6 +124,7 @@ Os arquivos abaixo são produzidos por `npx prisma generate` usando `backend/pri
 | `frontend/src/components/sidebar.tsx` | Renderiza a navegação principal em desktop e mobile. |
 | `frontend/src/components/site-header.tsx` | Cabeçalho com identidade visual e atalhos de navegação. |
 | `frontend/src/components/backend-wakeup.tsx` | Consulta o healthcheck da API com tentativas para aguardar seu despertar em provedores que suspendem serviços. |
+| `frontend/src/components/autocomplete-select.tsx` | Controle reutilizável de autoselect para listas pesquisáveis, usado para pets, raças, vias e unidades. |
 | `frontend/src/lib/app-info.ts` | Centraliza constantes de identidade e informações institucionais do CVET. |
 
 ### Páginas
@@ -133,8 +136,8 @@ Os arquivos abaixo são produzidos por `npx prisma generate` usando `backend/pri
 | `frontend/src/app/internacoes/page.tsx` | Define título, contexto e renderiza o quadro operacional de internações. |
 | `frontend/src/app/internacoes/[id]/page.tsx` | Rota dinâmica que entrega o identificador para a tela de detalhe da internação. |
 | `frontend/src/app/leitos/page.tsx` | Tela de listagem e cadastro de leitos. |
-| `frontend/src/app/tutores/page.tsx` | Tela de listagem e cadastro de tutores, com inclusão de um ou mais pets. |
-| `frontend/src/app/financeiro/page.tsx` | Exibe totais, saldos e o formulário de quitação que baixa e encerra a internação. |
+| `frontend/src/app/tutores/page.tsx` | Tela compacta de CRUD de tutores e pets, com pesquisa, autocomplete, edição e exclusão segura. |
+| `frontend/src/app/financeiro/page.tsx` | Discrimina diárias e medicações aplicadas por unidade, preço e total; permite quitação com baixa automática. |
 | `frontend/src/app/usuarios/page.tsx` | Tela de listagem e cadastro de usuários do sistema. |
 | `frontend/src/app/analytics/page.tsx` | Página que hospeda o dashboard analítico. |
 | `frontend/src/app/mapa/page.tsx` | Tela de mapa diário de administração de medicações. |
@@ -182,6 +185,8 @@ Os arquivos abaixo são produzidos por `npx prisma generate` usando `backend/pri
 | `docs/apresentacao.md` | Material de apresentação resumido do projeto. |
 | `docs/apresentacao-v2.0.md` | Versão revisada do material de apresentação. |
 | `docs/guia-arquivos.md` | Este guia: referência de responsabilidades por arquivo. |
+| `docs/schema-postgresql.sql` | DDL PostgreSQL para criar o modelo atual em um banco vazio. |
+| `docs/operacao-docker.md` | Guia portável para construção, execução, logs, volume e reset do Docker Compose. |
 
 ## Fluxos importantes
 
@@ -195,7 +200,7 @@ Os arquivos abaixo são produzidos por `npx prisma generate` usando `backend/pri
 
 ### Pagamento e baixa
 
-1. O financeiro calcula o saldo usando a diária do leito e os pagamentos registrados.
+1. O financeiro calcula o saldo usando diária do leito, doses de medicação aplicadas e pagamentos registrados.
 2. A quitação exige o valor integral do saldo.
 3. A API grava o pagamento, define a saída, atualiza o valor das diárias e marca `baixa: true` na mesma transação.
 4. A rota operacional de internações consulta somente `baixa: false`; por isso o paciente quitado não aparece mais nessa relação.

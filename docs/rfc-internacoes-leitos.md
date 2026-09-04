@@ -12,6 +12,9 @@ O CVET organiza pacientes internados, responsáveis, leitos, medicações e valo
 - O total é calculado por $\max(1, \lceil \text{saída} - \text{entrada} \rceil) \times \text{diária do leito}$.
 - Leitos possuem tipo `N` (Normal) ou `I` (UTI) e valor diário.
 - O financeiro calcula valores até a data atual para internações abertas e até a alta para internações encerradas.
+- Cada medicação possui unidade, quantidade por dose, preço unitário, doses aplicadas e texto livre. Somente doses aplicadas entram no fechamento.
+- A quitação exige o saldo integral; a mesma transação registra o pagamento, define a saída e marca `baixa: true`.
+- A relação operacional de internações retorna apenas registros com `baixa: false`.
 
 ## Dados
 
@@ -21,6 +24,8 @@ O CVET organiza pacientes internados, responsáveis, leitos, medicações e valo
 | `Pet` | Paciente vinculado ao tutor |
 | `Leito` | Número, nome, tipo e diária |
 | `Internacao` | Reserva do leito, período, status e total previsto |
+| `Medicacao` | Prescrição vinculada, doses aplicadas e valor por dose |
+| `Raca` | Catálogo de raças caninas e felinas por enum de espécie |
 | `FormaPagamento` | Cadastro de meios de pagamento |
 | `Pagamento` | Valor pago por internação |
 
@@ -32,10 +37,12 @@ Uma nova reserva entra em conflito quando $\text{entrada existente} \le \text{sa
 
 - `GET /api/pets`: pets cadastrados com tutor.
 - `GET /api/leitos`: leitos e diária.
+- `GET /api/racas?especie=CANINO|FELINO`: catálogo de raças pesquisável.
+- `GET|POST /api/tutores`, `PUT|DELETE /api/tutores/:id`: gestão de tutores e pets.
 - `POST /api/internacoes`: cria uma reserva após validar pet, leito e período.
 - `GET /api/financeiro`: saldos atualizados e formas de pagamento.
-- `POST /api/financeiro/pagamentos`: registra um pagamento.
+- `POST /api/financeiro/pagamentos`: quita o saldo e efetua a baixa da internação.
 
 ## Operação
 
-O `docker compose up --build -d` cria as tabelas e insere dados iniciais idempotentes para leitos e formas de pagamento.
+O `docker compose up --build -d` cria ou atualiza as tabelas e insere somente as formas de pagamento de referência. Não cria dados clínicos de demonstração. O DDL de referência está em `docs/schema-postgresql.sql`.

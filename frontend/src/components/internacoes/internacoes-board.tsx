@@ -73,17 +73,17 @@ export function InternacoesBoard() {
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
-        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="font-[family-name:var(--font-display)] text-xl font-semibold text-ink">Nova internação</h2><p className="mt-1 text-sm text-slate-500">Selecione um pet e um leito disponível para o período.</p></div><span className="inline-flex w-fit items-center gap-2 rounded-lg bg-moss/10 px-3 py-2 text-sm font-semibold text-moss"><CalendarDays size={16} /> Período validado</span></div>
-        <InternacaoForm onCreate={handleCreate} />
-      </section>
-
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <ResumoItem label="Internados" value={resumo.total} icon={BedDouble} />
         <ResumoItem label="Críticos" value={resumo.criticos} icon={CalendarDays} active={filtroStatus === 'critico'} onClick={() => toggleStatus('critico')} />
         <ResumoItem label="Observação" value={resumo.observacao} icon={CalendarDays} active={filtroStatus === 'observacao'} onClick={() => toggleStatus('observacao')} />
         <ResumoItem label="Estáveis" value={resumo.estaveis} icon={CalendarDays} active={filtroStatus === 'estavel'} onClick={() => toggleStatus('estavel')} />
         <ResumoItem label="Diárias previstas" value={`R$ ${totalDiarias.toFixed(2).replace('.', ',')}`} icon={CircleDollarSign} />
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="font-[family-name:var(--font-display)] text-xl font-semibold text-ink">Nova internação</h2><p className="mt-1 text-sm text-slate-500">Selecione um pet e um leito disponível para o período.</p></div><span className="inline-flex w-fit items-center gap-2 rounded-lg bg-moss/10 px-3 py-2 text-sm font-semibold text-moss"><CalendarDays size={16} /> Período validado</span></div>
+        <InternacaoForm onCreate={handleCreate} />
       </section>
 
       <section className="grid content-start gap-4">

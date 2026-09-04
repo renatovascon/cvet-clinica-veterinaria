@@ -9,6 +9,7 @@ import { leitosRoutes } from './routes/leitos.js';
 import { petsRoutes } from './routes/pets.js';
 import { financeiroRoutes } from './routes/financeiro.js';
 import { usuariosRoutes } from './routes/usuarios.js';
+import { racasRoutes } from './routes/racas.js';
 
 export const app = new Hono();
 
@@ -19,6 +20,7 @@ app.get('/api/health', (c) => c.json({ ok: true }));
 
 app.route('/api/auth', authRoutes);
 app.route('/api/usuarios', usuariosRoutes);
+app.route('/api/racas', racasRoutes);
 app.route('/api/leitos', leitosRoutes);
 app.route('/api/pets', petsRoutes);
 app.route('/api/tutores', tutoresRoutes);

@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { randomBytes, scryptSync } from 'node:crypto';
+import { racasCaninas, racasFelinas } from './catalogo-racas.mjs';
 
 const { Client } = pg;
 const client = new Client({ connectionString: process.env.DATABASE_URL });
@@ -7,6 +8,10 @@ const client = new Client({ connectionString: process.env.DATABASE_URL });
 await client.connect();
 
 await client.query(`
+  DO $$ BEGIN
+    CREATE TYPE "EspeciePet" AS ENUM ('CANINO', 'FELINO', 'OUTROS');
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END $$;
   CREATE TABLE IF NOT EXISTS "Usuario" (
     "id" TEXT NOT NULL PRIMARY KEY, "nome" TEXT NOT NULL, "cpf" TEXT UNIQUE,
     "email" TEXT NOT NULL UNIQUE, "senhaHash" TEXT NOT NULL,
@@ -21,8 +26,13 @@ await client.query(`
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
   CREATE TABLE IF NOT EXISTS "Pet" (
-    "id" TEXT NOT NULL PRIMARY KEY, "nome" TEXT NOT NULL, "especie" TEXT NOT NULL, "raca" TEXT, "dataNascimento" TIMESTAMP,
+    "id" TEXT NOT NULL PRIMARY KEY, "nome" TEXT NOT NULL, "especie" "EspeciePet" NOT NULL, "raca" TEXT, "dataNascimento" TIMESTAMP,
     "tutorId" TEXT NOT NULL REFERENCES "Tutor"("id"), "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS "Raca" (
+    "id" TEXT NOT NULL PRIMARY KEY, "nome" TEXT NOT NULL, "especie" "EspeciePet" NOT NULL, "grupoFci" INTEGER,
+    UNIQUE ("nome", "especie"),
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
   CREATE TABLE IF NOT EXISTS "Internacao" (
     "id" TEXT NOT NULL PRIMARY KEY, "petNome" TEXT NOT NULL, "especie" TEXT NOT NULL, "tutorNome" TEXT NOT NULL,
@@ -50,6 +60,26 @@ await client.query(`
   );
 `);
 
+await client.query(`
+  ALTER TABLE "Pet" ALTER COLUMN "especie" TYPE "EspeciePet"
+  USING CASE UPPER("especie"::text)
+    WHEN 'CANINA' THEN 'CANINO'::"EspeciePet"
+    WHEN 'CANINO' THEN 'CANINO'::"EspeciePet"
+    WHEN 'FELINA' THEN 'FELINO'::"EspeciePet"
+    WHEN 'FELINO' THEN 'FELINO'::"EspeciePet"
+    ELSE 'OUTROS'::"EspeciePet"
+  END
+`);
+await client.query(`
+  DO $$ BEGIN
+    IF to_regclass('public."RacaCanina"') IS NOT NULL THEN
+      INSERT INTO "Raca" ("id", "nome", "especie", "grupoFci", "createdAt", "updatedAt")
+      SELECT "id", "nome", 'CANINO'::"EspeciePet", "grupoFci", "createdAt", "updatedAt" FROM "RacaCanina"
+      ON CONFLICT ("nome", "especie") DO NOTHING;
+      DROP TABLE "RacaCanina";
+    END IF;
+  END $$;
+`);
 await client.query(`ALTER TABLE "Internacao" ADD COLUMN IF NOT EXISTS "baixa" BOOLEAN NOT NULL DEFAULT FALSE`);
 await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "descricao" TEXT NOT NULL DEFAULT ''`);
 await client.query(`ALTER TABLE "Medicacao" ADD COLUMN IF NOT EXISTS "valorDose" DOUBLE PRECISION NOT NULL DEFAULT 0`);
@@ -78,6 +108,29 @@ await client.query(`
     ('dinheiro', 'Dinheiro'), ('credito', 'Crédito'), ('debito', 'Débito'), ('pix', 'PIX'), ('transferencia', 'Transferência')
   ON CONFLICT (id) DO NOTHING
 `);
+
+await client.query(`
+  INSERT INTO "Raca" (id, nome, especie, "grupoFci") VALUES
+    ('canino-srd', 'Sem raça definida (SRD)', 'CANINO', NULL), ('canino-beagle', 'Beagle', 'CANINO', 6), ('canino-border-collie', 'Border Collie', 'CANINO', 1),
+    ('canino-buldogue-frances', 'Buldogue Francês', 'CANINO', 9), ('canino-chihuahua', 'Chihuahua', 'CANINO', 9), ('canino-dachshund', 'Dachshund', 'CANINO', 4),
+    ('canino-golden-retriever', 'Golden Retriever', 'CANINO', 8), ('canino-labrador-retriever', 'Labrador Retriever', 'CANINO', 8), ('canino-pastor-alemao', 'Pastor Alemão', 'CANINO', 1),
+    ('canino-poodle', 'Poodle', 'CANINO', 9), ('canino-pug', 'Pug', 'CANINO', 9), ('canino-rottweiler', 'Rottweiler', 'CANINO', 2),
+    ('canino-shih-tzu', 'Shih Tzu', 'CANINO', 9), ('canino-yorkshire-terrier', 'Yorkshire Terrier', 'CANINO', 3),
+    ('felino-srd', 'Sem raça definida (SRD)', 'FELINO', NULL), ('felino-abissinio', 'Abissínio', 'FELINO', NULL), ('felino-american-shorthair', 'American Shorthair', 'FELINO', NULL),
+    ('felino-angora-turco', 'Angorá Turco', 'FELINO', NULL), ('felino-bengal', 'Bengal', 'FELINO', NULL), ('felino-birman', 'Sagrado da Birmânia', 'FELINO', NULL),
+    ('felino-bombay', 'Bombaim', 'FELINO', NULL), ('felino-british-shorthair', 'British Shorthair', 'FELINO', NULL), ('felino-maine-coon', 'Maine Coon', 'FELINO', NULL),
+    ('felino-munchkin', 'Munchkin', 'FELINO', NULL), ('felino-noruegues-floresta', 'Gato Norueguês da Floresta', 'FELINO', NULL), ('felino-persian', 'Persa', 'FELINO', NULL),
+    ('felino-ragdoll', 'Ragdoll', 'FELINO', NULL), ('felino-russian-blue', 'Azul Russo', 'FELINO', NULL), ('felino-siamese', 'Siamês', 'FELINO', NULL),
+    ('felino-siberian', 'Siberiano', 'FELINO', NULL), ('felino-sphynx', 'Sphynx', 'FELINO', NULL)
+  ON CONFLICT (nome, especie) DO NOTHING
+`);
+
+for (const [index, raca] of [...racasCaninas, ...racasFelinas].entries()) {
+  await client.query(
+    `INSERT INTO "Raca" (id, nome, especie, "grupoFci") VALUES ($1, $2, $3::"EspeciePet", $4) ON CONFLICT (nome, especie) DO NOTHING`,
+    [`catalogo-${raca.especie.toLowerCase()}-${index}`, raca.nome, raca.especie, raca.grupoFci]
+  );
+}
 
 await client.end();
 console.log('Banco de dados pronto, sem dados clínicos de demonstração.');

@@ -10,7 +10,8 @@ Sistema web para operação de internações veterinárias, centralizando pacien
 2. Cadastre leitos Normal ou UTI com seus valores de diária.
 3. Crie a internação selecionando um pet e um leito disponível.
 4. Acompanhe status, medicações, mapa de execução e valores.
-5. Registre pagamentos no financeiro após a alta.
+5. Registre doses aplicadas e seus preços no financeiro.
+6. Quite o saldo para baixar e encerrar a internação.
 
 ## 3. Regras de negócio
 
@@ -18,15 +19,17 @@ Sistema web para operação de internações veterinárias, centralizando pacien
 - Uma internação só é criada para pet e leito existentes.
 - Um mesmo leito não pode possuir duas reservas no mesmo período.
 - A diária é calculada pelo leito e pelo período de permanência.
+- O financeiro soma diárias e doses de medicação aplicadas.
+- A quitação integral efetua a baixa da internação.
 
 ## 4. Módulos
 
 | Módulo | Entrega |
 | --- | --- |
-| Tutores | Cadastro do responsável e múltiplos pets |
+| Tutores | CRUD do responsável e múltiplos pets, com raças pesquisáveis |
 | Leitos | Número, nome, tipo N/I e diária |
-| Internações | Reserva, acompanhamento e medicações |
-| Financeiro | Saldo acumulado e pagamentos |
+| Internações | Reserva, acompanhamento, subgrade editável de medicações e mapa de horários |
+| Financeiro | Diárias, medicações aplicadas discriminadas, saldo, pagamento e baixa |
 | Analytics | Indicadores por espécie e status |
 
 ## 5. Tecnologia

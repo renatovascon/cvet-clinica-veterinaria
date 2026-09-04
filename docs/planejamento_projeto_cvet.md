@@ -1,6 +1,6 @@
 # Planejamento Técnico: Projeto CVET - Gestão Veterinária
-**Data de Atualização:** 19/04/2026
-**Status:** Fase de Prototipagem e Planejamento de Engenharia
+**Data de Atualização:** 04/09/2026
+**Status:** MVP funcional em evolução
 
 ## 1. Visão Geral
 O software **CVET** visa digitalizar o processo de internação da clínica do Dr. Lucas Bellucci em Socorro/SP. O foco é substituir fichas manuais por um fluxo digital centralizado, garantindo segurança e agilidade no monitoramento dos pets.
@@ -11,12 +11,14 @@ O software **CVET** visa digitalizar o processo de internação da clínica do D
 
 ### 2.1 Requisitos de Usuário (Alto Nível)
 - **RU01:** Registro e gestão do ciclo completo de internação.
-- **RU02:** Lançamento de evolução clínica diária (sinais vitais e notas).
-- **RU03:** Alertas visuais para horários de medicação pendentes.
+- **RU02:** Registro de medicações, horários, doses aplicadas e valores por dose.
+- **RU03:** Visualização do mapa de execução e da próxima medicação.
+- **RU04:** Fechamento financeiro com diárias, medicações aplicadas e baixa da internação após quitação.
 
 ### 2.2 Requisitos de Sistema (Especificação Técnica)
 - **RF01:** Validação lógica de datas (Entrada <= Saída).
-- **RF02:** Dashboard em tempo real com status dos pacientes via WebSocket/Polling.
+- **RF02:** Dashboard operacional com filtros por status e pesquisa por paciente/tutor.
+- **RF03:** CRUD de tutores e pets, com catálogo pesquisável de raças caninas e felinas.
 - **RNF01 (Desempenho):** Tempo de resposta das rotas principais < 2s.
 - **RNF02 (Segurança):** Comunicação via HTTPS e persistência de dados em Nuvem.
 
@@ -24,16 +26,15 @@ O software **CVET** visa digitalizar o processo de internação da clínica do D
 
 ## 3. Arquitetura e Padrões de Software
 
-### 3.1 Padrão Arquitetural: MVC (Model-View-Controller)
-- **Model:** Gestão dos dados e regras de negócio (Pets, Prontuários).
-- **View:** Interface responsiva focada na usabilidade do veterinário.
-- **Controller:** Mediação entre a interface e a lógica de persistência.
+### 3.1 Arquitetura em camadas
+- **Dados:** PostgreSQL, Prisma e modelo relacional de tutores, pets, internações, medicações e pagamentos.
+- **API:** Hono com validação Zod, regras de conflito de leitos e baixa financeira transacional.
+- **Interface:** Next.js e Tailwind CSS, com componentes operacionais, tabelas e autoselects para listas extensas.
 
 ### 3.2 Padrões de Projeto (Design Patterns)
-- **Observer:** Para atualização automática da interface quando os dados do Model mudarem.
-- **Repository:** Isolamento da lógica de banco de dados para facilitar manutenção e testes.
-- **Strategy:** Para diferentes cálculos de dosagem de medicamentos.
-- **Adapter:** Para integração com serviços externos (ex: geradores de PDF para alta médica).
+- **Prisma Client:** Acesso tipado e centralizado ao banco de dados.
+- **Zod:** Validação de contratos HTTP na borda da API.
+- **Docker Compose:** Orquestração local de PostgreSQL, API e frontend com healthchecks.
 
 ### 3.3 Visões da Arquitetura (Modelo 4+1)
 1. **Lógica:** Diagramas de classes e entidades clínicas.

@@ -6,6 +6,7 @@ import { ArrowLeft, Trash2 } from 'lucide-react';
 import { Internacao, InternacaoStatus, Medicacao } from '@/types/internacao';
 import { calcularHorarios, FREQUENCIAS, resolverProximaMedicacao } from '@/lib/horarios';
 import { StatusBadge } from './status-badge';
+import { AutocompleteSelect } from '@/components/autocomplete-select';
 
 const STATUS_OPTIONS: { value: InternacaoStatus; label: string; classes: string }[] = [
   { value: 'estavel',    label: 'Estável',    classes: 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
@@ -218,20 +219,8 @@ export function InternacaoDetalhe({ id }: Props) {
                 className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss"
               />
             </label>
-            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-              Unidade
-              <select value={medUnidade} onChange={(e) => setMedUnidade(e.target.value)}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss">
-                {UNIDADES.map((u) => <option key={u}>{u}</option>)}
-              </select>
-            </label>
-            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-              Via
-              <select value={medVia} onChange={(e) => setMedVia(e.target.value)}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moss">
-                {VIAS.map((v) => <option key={v}>{v}</option>)}
-              </select>
-            </label>
+            <AutocompleteSelect label="Unidade" value={medUnidade} onChange={setMedUnidade} placeholder="Buscar unidade" emptyMessage="Nenhuma unidade encontrada." options={UNIDADES.map((unidade) => ({ value: unidade, label: unidade }))} />
+            <AutocompleteSelect label="Via" value={medVia} onChange={setMedVia} placeholder="Buscar via" emptyMessage="Nenhuma via encontrada." options={VIAS.map((via) => ({ value: via, label: via }))} />
             <label className="grid gap-1.5 text-sm font-medium text-slate-700">
               Preço por dose
               <input

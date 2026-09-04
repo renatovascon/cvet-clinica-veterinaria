@@ -6,7 +6,7 @@ Sistema de gestão de internações para clínicas veterinárias. Projeto desenv
 
 - **Frontend:** Next.js 16, Tailwind CSS, TypeScript
 - **Backend:** Hono, Prisma, PostgreSQL
-- **Infra:** Docker Compose (local) · Render (produção) · GitHub Actions (CI/CD)
+- **Infra:** Docker Compose (local) · Render (produção)
 
 ## Getting Started
 
@@ -21,19 +21,35 @@ Sistema de gestão de internações para clínicas veterinárias. Projeto desenv
 
 ```bash
 # Clone o repositório
-git clone https://github.com/renatovascon/cvet-clinica-veterinaria.git
+git clone https://github.com/rolivei28/cvet-clinica-veterinaria.git
 cd cvet-clinica-veterinaria
 
-# Suba os dois serviços
-docker compose up --build
+# Baixe imagens, instale dependências dentro dos containers, construa e inicie os três serviços
+docker compose up --build -d
 ```
 
 | Serviço   | URL                     |
 |-----------|-------------------------|
 | Frontend  | http://localhost:3000   |
 | API       | http://localhost:3001   |
+| PostgreSQL | localhost:5432 (`cvet`/`cvet`) |
 
-O banco de dados é criado automaticamente na primeira execução, sem dados clínicos de demonstração. Cadastre usuários, leitos, tutores e pets pela aplicação.
+O banco é criado e atualizado automaticamente na primeira execução, sem dados clínicos de demonstração. O Compose aguarda os healthchecks do banco e da API antes de iniciar o frontend.
+
+Para acompanhar o ambiente:
+
+```bash
+docker compose ps
+docker compose logs -f api
+```
+
+Para encerrar os serviços sem apagar dados:
+
+```bash
+docker compose down
+```
+
+O volume `cvet-db` preserva os dados. Para remover também o banco local, use `docker compose down -v`.
 
 ---
 
@@ -76,17 +92,22 @@ cd frontend && npm test
 ## Funcionalidades
 
 - Cadastro de tutores com um ou mais pets
+- CRUD de tutores e pets, com proteção de histórico de internações
+- Catálogo pesquisável de raças caninas e felinas
 - Cadastro de leitos Normal/UTI, diária e bloqueio de períodos sobrepostos
 - Internações com seleção de pet e leito existentes, período, descrição e cálculo de diárias
 - Controle de status por pet (Estável · Observação · Crítico)
-- Gerenciamento de medicações por internação
+- Gerenciamento de medicações por internação, com texto livre, unidade, preço por dose e doses aplicadas
 - **Mapa de Execução** — grade de horários de medicação por pet
 - Dashboard com analytics (espécie, status, volume)
-- Financeiro com saldo por internação, pagamentos e formas de pagamento
+- Financeiro com diárias, medicações aplicadas discriminadas, saldo e baixa automática da internação após quitação
 
 ## Documentação
 
 - [RFC de internações e leitos](docs/rfc-internacoes-leitos.md)
+- [DDL PostgreSQL](docs/schema-postgresql.sql)
+- [Operação com Docker](docs/operacao-docker.md)
+- [Guia de arquivos](docs/guia-arquivos.md)
 - [Apresentação v2.0](docs/apresentacao-v2.0.md)
 
 ## Deploy

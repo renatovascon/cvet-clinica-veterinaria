@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { InternacaoStatus, NovaInternacao } from '@/types/internacao';
 import { calcularHorarios, FREQUENCIAS } from '@/lib/horarios';
+import { AutocompleteSelect } from '@/components/autocomplete-select';
 
 type InternacaoFormProps = {
   onCreate: (data: NovaInternacao) => Promise<string | null>;
@@ -144,12 +145,7 @@ export function InternacaoForm({ onCreate }: InternacaoFormProps) {
       {loadError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</p>}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <label className="grid gap-2 text-sm font-medium text-slate-700">Pet cadastrado
-          <select value={petId} onChange={(e) => setPetId(e.target.value)} required className="rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-moss">
-            <option value="">Selecione o pet</option>
-            {pets.map((pet) => <option key={pet.id} value={pet.id}>{pet.nome} · {pet.especie} · {pet.tutor.nome}</option>)}
-          </select>
-        </label>
+        <AutocompleteSelect label="Pet cadastrado" value={petId} onChange={setPetId} placeholder="Buscar por pet, espécie ou tutor" emptyMessage="Nenhum pet encontrado." required options={pets.map((pet) => ({ value: pet.id, label: pet.nome, description: `${pet.especie} · Tutor: ${pet.tutor.nome}` }))} />
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           Status
           <select
